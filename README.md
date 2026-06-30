@@ -4,7 +4,7 @@
 
 ## 在线游玩
 
-部署完成后访问：[GitHub Pages 地址见仓库 Settings → Pages](https://github.com/ChongzZhang/huantu-jixing/settings/pages)
+**https://chongzzhang.github.io/huantu-jixing/**
 
 ## 本地运行
 
