@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>宦途疾行</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="wrap">
+    <canvas id="game"></canvas>
+
+    <div id="screen-menu" class="screen overlay-ui">
+      <div class="panel menu-panel">
+        <h1>宦途疾行</h1>
+        <p class="sub">庆历进士 · 三格官道 · 四线升迁</p>
+        <label>姓名 <input type="text" id="player-name" value="沈砚青" maxlength="8"></label>
+        <label class="difficulty-label">难度
+          <select id="difficulty">
+            <option value="easy">平易 · 同僚最慢</option>
+            <option value="normal" selected>中庸 · 常速</option>
+            <option value="hard">严苛 · 同僚较快</option>
+          </select>
+        </label>
+        <button type="button" id="btn-start" class="btn-primary">开跑</button>
+        <button type="button" id="btn-codex" class="btn-secondary">典故图鉴</button>
+        <p class="hint">鼠标跟随 · 碰触拾取（奏章同） · P 暂停</p>
+        <p id="load-hint" class="load-hint"></p>
+      </div>
+    </div>
+
+    <div id="screen-hud" class="screen">
+      <button type="button" id="btn-pause" class="btn-pause" title="暂停 (P)">暂停</button>
+    </div>
+
+    <div id="screen-tutorial" class="screen overlay-ui tutorial-screen hidden">
+      <div class="panel tutorial-panel">
+        <button type="button" id="tutorial-skip" class="tutorial-skip">跳过</button>
+        <p id="tutorial-progress" class="tutorial-progress">1 / 4</p>
+        <div id="tutorial-scene" class="tutorial-scene" aria-hidden="true"></div>
+        <h2 id="tutorial-title">移动</h2>
+        <p id="tutorial-body" class="tutorial-body"></p>
+        <p id="tutorial-continue" class="tutorial-continue">点击继续</p>
+      </div>
+    </div>
+
+    <div id="screen-pause" class="screen overlay-ui hidden">
+      <div class="panel pause-panel">
+        <h2>稍憩</h2>
+        <p class="sub">摸魁岸，且歇片刻</p>
+        <button type="button" id="btn-resume" class="btn-primary">继续宦途</button>
+      </div>
+    </div>
+
+    <div id="screen-end" class="screen overlay-ui hidden">
+      <div class="panel end-panel scroll-panel">
+        <div class="scroll-rod scroll-rod-top"></div>
+        <div class="scroll-viewport" id="scroll-viewport">
+          <div class="scroll-track" id="scroll-track"></div>
+        </div>
+        <div class="scroll-rod scroll-rod-bottom"></div>
+        <p id="scroll-hint" class="scroll-hint hidden">← 左右拖动阅卷 · 升官图 →</p>
+        <div class="scroll-actions">
+          <button type="button" id="btn-retry" class="btn-primary">再赴宦途</button>
+          <button type="button" id="btn-codex-end" class="btn-secondary">图鉴</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-codex" class="modal hidden">
+    <div class="modal-inner">
+      <h3>典故图鉴</h3>
+      <div id="codex-body"></div>
+      <button type="button" class="modal-close btn-secondary">关闭</button>
+    </div>
+  </div>
+
+  <script src="js/data/game-data.js"></script>
+  <script src="js/data-load.js"></script>
+  <script src="js/lanes.js"></script>
+  <script src="js/pickup-fx.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/difficulty.js"></script>
+  <script src="js/ai-move.js"></script>
+  <script src="js/npcs.js"></script>
+  <script src="js/rivals.js"></script>
+  <script src="js/exit-reasons.js"></script>
+  <script src="js/ranks.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/obstacle-events.js"></script>
+  <script src="js/spawner.js"></script>
+  <script src="js/events.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/life-scroll.js"></script>
+  <script src="js/tutorial.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

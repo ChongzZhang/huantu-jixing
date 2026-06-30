@@ -1,0 +1,23 @@
+{
+  "_comment": "跑酷梯度：index 0 为开局（新科进士）",
+  "startIndex": { "benguan": 0, "sanjie": 0, "xun": -1, "jue": -1 },
+  "winIndex": { "benguan": 17, "sanjie": 17, "xun": 11, "jue": 11 },
+  "benguan": [
+    "bg_124", "bg_123", "bg_122", "bg_121", "bg_116", "bg_120",
+    "bg_105", "bg_100", "bg_101", "bg_107", "bg_109", "bg_23",
+    "bg_15", "bg_21", "bg_10", "bg_11", "bg_02", "bg_01"
+  ],
+  "sanjie": [
+    "sj_23", "sj_22", "sj_21", "sj_20", "sj_19", "sj_18",
+    "sj_17", "sj_16", "sj_15", "sj_12", "sj_10", "sj_08",
+    "sj_07", "sj_06", "sj_05", "sj_04", "sj_03", "sj_01"
+  ],
+  "xun": [
+    "xun_12", "xun_11", "xun_10", "xun_09", "xun_08", "xun_07",
+    "xun_06", "xun_05", "xun_04", "xun_03", "xun_02", "xun_01"
+  ],
+  "jue": [
+    "jue_12", "jue_11", "jue_10", "jue_09", "jue_08", "jue_07",
+    "jue_06", "jue_05", "jue_04", "jue_03", "jue_02", "jue_01"
+  ]
+}
