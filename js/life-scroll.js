@@ -18,6 +18,42 @@ const LifeScroll = (() => {
     const sanjie = d.ranks?.sanjie?.name || '未授';
     const reason = d.reason || '';
 
+    if (d.type === 'emperor') {
+      return {
+        title: '登基称帝',
+        epilogue: [
+          `${name}历四途顶格，黄袍加身，年齿${age}岁。`,
+          '三十秒乱局之中全身而退，殿陛山呼，万民景从。',
+          '庙号谥典，千秋万代。'
+        ],
+        seal: '天子御极 · 万国来朝'
+      };
+    }
+
+    if (d.type === 'traitor') {
+      return {
+        title: '乱臣贼子',
+        epilogue: [
+          `${name}妄承黄袍，欲趁乱局登基。`,
+          '谪令诏狱齐至，安危气节俱尽，身名俱裂。',
+          '青史一笔，定为乱臣。'
+        ],
+        seal: '诏狱系枷 · 史笔如铁'
+      };
+    }
+
+    if (d.type === 'minister' || (d.grandWin && !d.coronationPicked)) {
+      return {
+        title: '位极人臣',
+        epilogue: [
+          `${name}历四途并进，终官${rankName}，年齿${age}岁。`,
+          `安危${safety}、气节${integrity}，朝野称为一时之选。`,
+          '黄袍当前而不取，守分而退，人称位极人臣。'
+        ],
+        seal: '紫宸赐券 · 青史留名'
+      };
+    }
+
     if (d.grandWin) {
       return {
         title: '位极人臣',

@@ -20,6 +20,9 @@ const Spawner = (() => {
   let amnestyAcc = 0;
   let specialAcc = 0;
   let obsAcc = 0;
+  let coronationRobe = null;
+  let coronationMode = false;
+  let hellAcc = 0;
 
   async function load(data) {
     if (data) {
@@ -46,6 +49,9 @@ const Spawner = (() => {
     amnestyAcc = 0;
     specialAcc = 0;
     obsAcc = 0;
+    coronationRobe = null;
+    coronationMode = false;
+    hellAcc = 0;
   }
 
   function spawnY(extraJitter) {
@@ -174,10 +180,11 @@ const Spawner = (() => {
     return pickWeighted(pool, (d) => pickWeight(d, progress));
   }
 
-  function spawnObstacle(layout, progress) {
-    const pool = obsDefs.filter((o) => o.tier === 3 && progress >= 0.08);
+  function spawnObstacle(layout, progress, forceHell) {
+    const prog = forceHell ? 1 : progress;
+    const pool = obsDefs.filter((o) => o.tier === 3 && (forceHell || progress >= 0.08));
     if (!pool.length) return;
-    const def = pickWeighted(pool, (d) => obsWeight(d, progress));
+    const def = pickWeighted(pool, (d) => obsWeight(d, prog));
     if (!def) return;
 
     const lane = resolveLane(def);
@@ -256,6 +263,101 @@ const Spawner = (() => {
     pickups.push(p);
   }
 
+  function spawnBadPickup(layout) {
+    let def = pickNegativePickup(1);
+    if (!def) {
+      const pool = pickDefs.filter((d) => d.color === 'blue');
+      def = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+    }
+    if (!def) return;
+
+    const lane = resolveLane(def);
+    const size = Lanes.fitSize(layout, 68, 50);
+    const p = {
+      ...def,
+      y: spawnY(Math.random() * 40),
+      lane,
+      w: size.w,
+      h: size.h,
+      uid: def.id + '_hell_' + Date.now() + Math.random()
+    };
+    attachFallMult(p, def, 'pickup');
+    if (coronationMode) p.fallMult = Math.min(1.55, (p.fallMult || 1) * 1.18);
+    p.x = Lanes.randomXInLane(lane, layout, p.w / 2);
+    Lanes.placeEntity(p, lane, layout);
+    pickups.push(p);
+  }
+
+  function spawnCoronationRobe(layout) {
+    if (coronationRobe || coronationMode) return;
+    const size = Lanes.fitSize(layout, 54, 60);
+    coronationRobe = {
+      name: '黄袍加身',
+      x: layout.trackLeft + layout.trackWidth / 2,
+      y: layout.playTop - 48,
+      lane: 1,
+      w: size.w,
+      h: size.h,
+      fallMult: 0.42,
+      pulse: Math.random() * Math.PI * 2,
+      flash: 0,
+      uid: 'robe_' + Date.now()
+    };
+    Lanes.placeEntity(coronationRobe, 1, layout);
+  }
+
+  function enterCoronationMode() {
+    coronationMode = true;
+    coronationRobe = null;
+    pickups = pickups.filter((p) => p.color === 'blue');
+    coins = [];
+    merits = [];
+    amnesties = [];
+    specials = [];
+    hellAcc = 0;
+    obsAcc = 0;
+    pickupAcc = 0;
+  }
+
+  function isCoronationMode() {
+    return coronationMode;
+  }
+
+  function tickCoronationHell(dt, layout, speed) {
+    hellAcc += dt;
+    const progressBoost = 1.48;
+
+    while (hellAcc > 0.1) {
+      hellAcc -= 0.1;
+      if (Math.random() < 0.94) spawnObstacle(layout, 1, true);
+      if (Math.random() < 0.88) spawnBadPickup(layout);
+      if (Math.random() < 0.55) spawnObstacle(layout, 1, true);
+    }
+
+    obstacles.forEach((o) => {
+      moveEntity(o, speed, dt, progressBoost);
+      keepInLane(o, layout);
+    });
+    pickups.forEach((p) => {
+      moveEntity(p, speed, dt, progressBoost);
+      keepInLane(p, layout);
+    });
+
+    const limit = (typeof window !== 'undefined' ? window.innerHeight : 900) + 120;
+    obstacles = obstacles.filter((o) => o.y < limit);
+    pickups = pickups.filter((p) => p.y < limit);
+  }
+
+  function tickCoronationRobe(dt, layout, speed) {
+    if (!coronationRobe) return;
+    coronationRobe.pulse = (coronationRobe.pulse || 0) + dt * 5;
+    coronationRobe.flash = (coronationRobe.flash || 0) + dt * 7;
+    moveEntity(coronationRobe, speed * 0.5, dt, 1);
+    Lanes.placeEntity(coronationRobe, coronationRobe.lane, layout);
+    const bottom = layout.playTop + layout.playHeight + 80;
+    if (coronationRobe.y > bottom) coronationRobe = null;
+  }
+
   function spawnCoin(layout) {
     const lane = 1;
     const size = Lanes.fitSize(layout, 24, 24);
@@ -318,6 +420,13 @@ const Spawner = (() => {
 
   function tick(dt, progress, layout, speed, rankState) {
     timer += dt;
+
+    if (coronationMode) {
+      tickCoronationHell(dt, layout, speed);
+      return;
+    }
+
+    tickCoronationRobe(dt, layout, speed);
 
     const obsInterval = Math.max(0.16, 1.85 - progress * 1.85);
     const pickInterval = Math.max(0.16, 0.82 - progress * 0.78);
@@ -406,9 +515,14 @@ const Spawner = (() => {
   function getAmnesties() { return amnesties; }
   function removeAmnesty(a) { amnesties = amnesties.filter((x) => x !== a); }
 
+  function getCoronationRobe() { return coronationRobe; }
+  function removeCoronationRobe() { coronationRobe = null; }
+
   return {
     load, reset, tick,
     getObstacles, getPickups, getCoins, getMerits, getAmnesties, getSpecials,
-    removeObstacle, removePickup, removeCoin, removeMerit, removeAmnesty, removeSpecial
+    removeObstacle, removePickup, removeCoin, removeMerit, removeAmnesty, removeSpecial,
+    spawnCoronationRobe, enterCoronationMode, isCoronationMode,
+    getCoronationRobe, removeCoronationRobe
   };
 })();

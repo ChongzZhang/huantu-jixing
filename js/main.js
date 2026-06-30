@@ -6,7 +6,8 @@ const START_AGE = 24;
 const SECONDS_PER_YEAR = 8; // 9.6÷1.2，年齿增速为上一版 1.2 倍
 const AGE_DEATH_START = 51;
 const AGE_DEATH_RAMP = 66;
-const PANEL_W = 208;
+const PANEL_W = 239;
+const DESKTOP_W = 598;
 const HUD_TOP = 118;
 const HUD_TOP_MOBILE = 102;
 
@@ -26,8 +27,7 @@ const Game = (() => {
   let sessionNpcKnockouts = 0;
 
   function isMobileLayout() {
-    if (cssW > 0 && cssW < 640) return true;
-    return typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+    return cssW > 0 && cssW < 640;
   }
 
   function layoutPanelW() {
@@ -200,8 +200,9 @@ const Game = (() => {
     const wrap = document.getElementById('wrap');
     const vp = window.visualViewport;
     dpr = Math.min(window.devicePixelRatio || 1, 2);
-    cssW = Math.round(vp?.width || wrap.clientWidth || window.innerWidth);
-    cssH = Math.round(vp?.height || window.innerHeight);
+    cssW = Math.round(wrap?.clientWidth || window.innerWidth || DESKTOP_W);
+    const narrow = cssW < 640;
+    cssH = Math.round(narrow && vp?.height ? vp.height : window.innerHeight);
     if (cssH < 400) cssH = Math.max(400, window.innerHeight);
     canvas.width = Math.round(cssW * dpr);
     canvas.height = Math.round(cssH * dpr);
@@ -233,6 +234,7 @@ const Game = (() => {
     Spawner.reset();
     Npcs.reset();
     Rivals.reset();
+    Coronation.reset();
     EventLog.reset();
     sessionNpcKnockouts = 0;
     Npcs.setOnKnockout(registerNpcKnockout);
@@ -272,6 +274,7 @@ const Game = (() => {
   }
 
   function getSpeed() {
+    if (Coronation.isActive()) return SPEED_MAX;
     const progress = getProgress();
     const curve = Math.pow(progress, 0.85) * 0.32 + Math.pow(progress, 3.6) * 0.68;
     const rankBoost = Ranks.benguanLevel() * 3.8;
@@ -293,6 +296,10 @@ const Game = (() => {
   }
 
   function formatTenureLeft() {
+    if (Coronation.isActive()) {
+      const sec = Math.max(0, Math.ceil(Coronation.getPhaseLeft()));
+      return `${sec}秒`;
+    }
     const sec = Math.max(0, Math.ceil(timeLeft));
     const m = Math.floor(sec / 60);
     const s = sec % 60;
@@ -306,7 +313,51 @@ const Game = (() => {
     return 0.0006 + curve * 0.014;
   }
 
+  function tenureHudLabel() {
+    return Coronation.isActive() ? '逼宫余' : '任期余';
+  }
+
+  function tryOfferCoronation() {
+    if (!Ranks.isGrandWin() || Coronation.isOffered()) return;
+    Coronation.offer();
+    Spawner.spawnCoronationRobe(layout);
+    EventLog.showQuick('黄袍加身', '四线顶格！金黄袍服飘来……', 'promote');
+  }
+
+  function handleCoronationRobe() {
+    const robe = Spawner.getCoronationRobe();
+    if (!robe || Coronation.isPicked()) return;
+    const pb = Player.hitbox(player);
+    const pad = 14;
+    const bob = Math.sin(robe.pulse || 0) * 4;
+    const box = {
+      x: robe.x - robe.w / 2 - pad,
+      y: robe.y + bob - robe.h / 2 - pad,
+      w: robe.w + pad * 2,
+      h: robe.h + pad * 2
+    };
+    if (!Renderer.aabb(pb, box)) return;
+    Spawner.removeCoronationRobe();
+    Coronation.startChallenge();
+    Spawner.enterCoronationMode();
+    EventLog.showQuick('黄袍加身', '三十秒乱局！撑住即登基！', 'promote');
+  }
+
+  function resolveEndOutcome(type, reason) {
+    if (Coronation.isActive() && type === 'fail') {
+      return { type: 'traitor', reason: '乱臣贼子' };
+    }
+    if (type === 'time' && Ranks.isGrandWin() && !Coronation.isPicked()) {
+      return { type: 'minister', reason: '位极人臣' };
+    }
+    if (type === 'emperor') {
+      return { type: 'emperor', reason: '登基称帝' };
+    }
+    return { type, reason };
+  }
+
   function checkAgeMortality(dt) {
+    if (Coronation.isActive()) return false;
     const age = getPlayerAge();
     const chance = getAgeDeathChancePerSecond(age);
     if (chance <= 0) return false;
@@ -529,6 +580,7 @@ const Game = (() => {
       age: getPlayerAge(),
       ranks: Ranks.snapshot(),
       grandWin: Ranks.isGrandWin(),
+      coronationPicked: Coronation.isPicked(),
       codex: EventLog.getCodex(),
       safety: player.safety,
       integrity: player.integrity,
@@ -546,8 +598,9 @@ const Game = (() => {
       safety: r.safety,
       integrity: r.integrity,
       type,
-      reason: type === 'fail' ? ExitReasons.fitReason(reason, r.age) : null,
+      reason: type === 'fail' ? ExitReasons.fitReason(reason, r.age) : (reason || null),
       grandWin: r.grandWin,
+      coronationPicked: r.coronationPicked,
       ranks: r.ranks,
       npcKnockouts: sessionNpcKnockouts,
       totalNpcKnockouts: (saved.achievements?.npcKnockouts || 0) + sessionNpcKnockouts
@@ -563,6 +616,9 @@ const Game = (() => {
 
   function endGame(type, reason) {
     if (phase === 'end') return;
+    const outcome = resolveEndOutcome(type, reason);
+    type = outcome.type;
+    reason = outcome.reason;
     phase = 'end';
     const grandWin = Ranks.isGrandWin();
     endResult = {
@@ -572,6 +628,7 @@ const Game = (() => {
       age: getPlayerAge(),
       ranks: Ranks.snapshot(),
       grandWin,
+      coronationPicked: Coronation.isPicked(),
       codex: EventLog.getCodex(),
       name: playerName,
       npcKnockouts: sessionNpcKnockouts,
@@ -635,14 +692,14 @@ const Game = (() => {
   function update(dt) {
     if (phase !== 'play' || paused || Tutorial.isActive()) return;
 
-    timeLeft -= dt;
-    if (timeLeft <= 0) {
-      timeLeft = 0;
-      endGame('time', '任期已满');
-      return;
+    if (Coronation.isActive()) {
+      if (Coronation.tick(dt)) {
+        endGame('emperor', '登基称帝');
+        return;
+      }
     }
 
-    const progress = getProgress();
+    const progress = Coronation.isActive() ? 1 : getProgress();
     const speed = getSpeed();
     player.distance += speed * dt;
 
@@ -660,6 +717,7 @@ const Game = (() => {
     Spawner.getCoins().forEach(handleCoin);
     Spawner.getMerits().forEach(handleMerit);
     Spawner.getAmnesties().forEach(handleAmnesty);
+    handleCoronationRobe();
 
     const spawnerState = {
       pickups: Spawner.getPickups(),
@@ -671,10 +729,17 @@ const Game = (() => {
     Npcs.tick(dt, layout, player, speed, progress, spawnerState, aiPeers);
     Rivals.tick(dt, layout, spawnerState, aiPeers);
 
-    if (Ranks.isGrandWin()) {
-      endGame('win', '四线顶格');
-      return;
+    tryOfferCoronation();
+
+    if (!Coronation.isActive()) {
+      timeLeft -= dt;
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        endGame('time', '任期已满');
+        return;
+      }
     }
+
     if (checkAgeMortality(dt)) return;
     checkVitals();
   }
@@ -712,17 +777,26 @@ const Game = (() => {
     Spawner.getCoins().forEach((c) => Renderer.drawCoin(ctx, c));
     Spawner.getMerits().forEach((m) => Renderer.drawMerit(ctx, m));
     Spawner.getPickups().forEach((p) => Renderer.drawPickup(ctx, p));
+    const robe = Spawner.getCoronationRobe();
+    if (robe) Renderer.drawCoronationRobe(ctx, robe);
     Renderer.drawPlayer(ctx, player);
 
+    if (Coronation.isActive()) {
+      Renderer.drawCoronationBanner(ctx, layout, Coronation.getPhaseLeft());
+    }
+
+    const tenureMeta = {
+      tenureLeft: formatTenureLeft(),
+      tenureLabel: tenureHudLabel()
+    };
     if (layout.mode === 'bottom') {
-      Renderer.drawRankPanelBottom(ctx, layout, Ranks.getState(), {
-        tenureLeft: formatTenureLeft()
-      });
+      Renderer.drawRankPanelBottom(ctx, layout, Ranks.getState(), tenureMeta);
     } else {
       Renderer.drawRankPanel(ctx, layout.panelX, layout.panelW, h, Ranks.getState(), {
         age: getPlayerAge(),
         ageProgress: getAgeProgress(),
-        tenureLeft: formatTenureLeft(),
+        tenureLeft: tenureMeta.tenureLeft,
+        tenureLabel: tenureMeta.tenureLabel,
         startAge: START_AGE
       });
     }

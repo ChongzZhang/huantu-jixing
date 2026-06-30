@@ -523,6 +523,64 @@ const Renderer = (() => {
     ctx.fillText('奏', s.x, cy);
   }
 
+  function drawCoronationRobe(ctx, robe) {
+    const r = robe.w / 2;
+    const bob = Math.sin(robe.pulse || 0) * 4;
+    const cy = robe.y + bob;
+    const flash = 0.55 + Math.sin(robe.flash || 0) * 0.45;
+
+    ctx.save();
+    ctx.globalAlpha = 0.35 + flash * 0.25;
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(robe.x, cy, r + 10 + flash * 6, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    const g = ctx.createRadialGradient(robe.x - 5, cy - 8, 2, robe.x, cy, r + 6);
+    g.addColorStop(0, '#fffef0');
+    g.addColorStop(0.35, '#ffe566');
+    g.addColorStop(0.72, '#e8b820');
+    g.addColorStop(1, '#9a7010');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(robe.x, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#6a4a08';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    ctx.fillStyle = '#4a2800';
+    ctx.font = `bold ${Math.max(17, r * 0.9)}px KaiTi, serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('袍', robe.x, cy - 1);
+
+    ctx.fillStyle = '#7a5008';
+    ctx.font = `bold ${Math.max(9, r * 0.34)}px KaiTi, serif`;
+    ctx.fillText('黄袍', robe.x, cy + r * 0.42);
+  }
+
+  function drawCoronationBanner(ctx, layout, phaseLeft) {
+    const sec = Math.max(0, Math.ceil(phaseLeft));
+    const w = layout.playAreaW;
+    const y = layout.hudH + layout.laneHeaderH + 6;
+    ctx.save();
+    ctx.fillStyle = 'rgba(90, 20, 20, 0.82)';
+    roundRect(ctx, 8, y, w - 16, 28, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = '#ffe8a0';
+    ctx.font = 'bold 14px KaiTi, serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`黄袍乱局 · 撑住 ${sec} 秒即登基`, w / 2, y + 14);
+    ctx.restore();
+  }
+
   function drawObstacle(ctx, o) {
     const tier = o.tier || 1;
     const x0 = o.x - o.w / 2;
@@ -661,7 +719,7 @@ const Renderer = (() => {
   function drawRankPanel(ctx, panelX, panelW, h, ranks, meta) {
     const pad = 6;
     const innerW = panelW - pad * 2;
-    const { age, ageProgress, tenureLeft, startAge } = meta || {};
+    const { age, ageProgress, tenureLeft, tenureLabel, startAge } = meta || {};
 
     ctx.fillStyle = COLORS.paperDeep;
     ctx.fillRect(panelX, 0, panelW, h);
@@ -699,7 +757,7 @@ const Renderer = (() => {
     ctx.textAlign = 'left';
     ctx.fillText('寿序', panelX + pad + 4, 66);
     ctx.textAlign = 'right';
-    ctx.fillText(`任期余 ${tenureLeft || '—'}`, panelX + pad + innerW - 4, 66);
+    ctx.fillText(`${tenureLabel || '任期余'} ${tenureLeft || '—'}`, panelX + pad + innerW - 4, 66);
 
     const rowH = 58;
     const startY = 86;
@@ -779,7 +837,7 @@ const Renderer = (() => {
   function drawRankPanelBottom(ctx, layout, ranks, meta) {
     const { panelY, panelW, bottomPanelH } = layout;
     const pad = 6;
-    const { tenureLeft } = meta || {};
+    const { tenureLeft, tenureLabel } = meta || {};
 
     ctx.fillStyle = COLORS.paperDeep;
     ctx.fillRect(0, panelY, panelW, bottomPanelH);
@@ -795,7 +853,7 @@ const Renderer = (() => {
     ctx.textAlign = 'right';
     ctx.fillStyle = COLORS.inkMid;
     ctx.font = '11px KaiTi, serif';
-    ctx.fillText(`任期余 ${tenureLeft || '—'}`, panelW - pad, panelY + 7);
+    ctx.fillText(`${tenureLabel || '任期余'} ${tenureLeft || '—'}`, panelW - pad, panelY + 7);
 
     const colW = (panelW - pad * 2) / ranks.length;
     const startY = panelY + 22;
@@ -957,7 +1015,8 @@ const Renderer = (() => {
 
   return {
     COLORS, aabb, drawPaperTexture, drawPlayChrome, drawHud, drawLaneHeaders,
-    drawLanes, drawPlayer, drawNpc, drawAmnesty, drawObstacle, drawSpecial, drawPickup, drawCoin, drawMerit,
+    drawLanes, drawPlayer, drawNpc, drawAmnesty, drawObstacle, drawSpecial, drawCoronationRobe, drawCoronationBanner,
+    drawPickup, drawCoin, drawMerit,
     drawRankPanel, drawRankPanelBottom, drawToast, drawAmbientBanner, drawOverlay, LANE_NAMES
   };
 })();

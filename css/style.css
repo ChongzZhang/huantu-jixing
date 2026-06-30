@@ -34,7 +34,7 @@ body::before {
 #wrap {
   position: relative;
   width: 100%;
-  max-width: 520px;
+  max-width: 598px;
   height: 100vh;
   height: 100dvh;
   margin: 0 auto;
@@ -43,7 +43,7 @@ body::before {
   background: var(--paper-mid);
 }
 
-@media (max-width: 640px), (pointer: coarse) {
+@media (max-width: 640px) {
   body {
     margin: 0;
   }
@@ -1110,7 +1110,7 @@ input[type="text"] {
   background: var(--paper-light);
   border: 2px solid var(--ink-mid);
   padding: 24px;
-  max-width: 520px;
+  max-width: 598px;
   max-height: 70vh;
   overflow-y: auto;
   width: 90%;
