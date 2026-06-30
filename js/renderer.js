@@ -25,6 +25,16 @@ const Renderer = (() => {
   const LANE_NAMES = ['改革道', '中庸道', '守旧道'];
   const LANE_TINT = [COLORS.laneReform, COLORS.laneCenter, COLORS.laneCons];
 
+  let activeLayout = { uiScale: 1, isMobile: false };
+
+  function setLayout(layout) {
+    activeLayout = layout || { uiScale: 1, isMobile: false };
+  }
+
+  function u(px) {
+    return Math.round(px * (activeLayout.uiScale || 1));
+  }
+
   function aabb(a, b) {
     return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
   }
@@ -75,7 +85,9 @@ const Renderer = (() => {
     ctx.fillRect(playAreaW, 0, 3, h);
   }
 
-  function drawHud(ctx, w, hudH, state, compact) {
+  function drawHud(ctx, w, hudH, state, layout) {
+    const lay = layout || activeLayout;
+    const compact = !!lay.isMobile;
     ctx.save();
     const grad = ctx.createLinearGradient(0, 0, 0, hudH);
     grad.addColorStop(0, '#f4ecda');
@@ -89,26 +101,26 @@ const Renderer = (() => {
     ctx.lineTo(w, hudH - 1);
     ctx.stroke();
 
-    const pad = compact ? 6 : 10;
+    const pad = compact ? u(6) : u(12);
     const { playerName, age, coinBank, coinNeed, meritBank, meritNeed, safety, integrity, amnestyLeft } = state;
 
-    ctx.font = compact ? 'bold 14px KaiTi, STKaiti, serif' : 'bold 16px KaiTi, STKaiti, serif';
+    ctx.font = `bold ${u(compact ? 15 : 19)}px KaiTi, STKaiti, serif`;
     ctx.fillStyle = COLORS.ink;
     ctx.textBaseline = 'top';
     ctx.textAlign = 'left';
     ctx.fillText(`庆历 · ${playerName || '沈砚青'}`, pad, 6);
-    ctx.font = compact ? '12px KaiTi, serif' : '13px KaiTi, serif';
+    ctx.font = `${u(compact ? 13 : 15)}px KaiTi, serif`;
     ctx.fillStyle = COLORS.inkMid;
     ctx.textAlign = 'right';
     ctx.fillText(`年齿 ${age ?? 24} 岁`, w - pad, 8);
 
-    const labelW = compact ? 30 : 34;
-    const barX = pad + labelW + (compact ? 4 : 6);
-    const barW = w - pad * 2 - labelW - (compact ? 4 : 6);
+    const labelW = compact ? u(32) : u(38);
+    const barX = pad + labelW + (compact ? u(4) : u(8));
+    const barW = w - pad * 2 - labelW - (compact ? u(4) : u(8));
     const halfW = (barW - 8) / 2;
-    const row1 = compact ? 26 : 28;
-    const row2 = compact ? 42 : 46;
-    const barH = compact ? 9 : 11;
+    const row1 = compact ? u(28) : u(32);
+    const row2 = compact ? u(46) : u(52);
+    const barH = compact ? u(10) : u(13);
 
     const coinProg = coinNeed ? Math.min(1, coinBank / coinNeed) : 0;
     const meritProg = meritNeed ? Math.min(1, meritBank / meritNeed) : 0;
@@ -120,7 +132,7 @@ const Renderer = (() => {
     drawStatBar(ctx, pad, row2, labelW, barX, halfW, barH, '安危', safeProg, COLORS.blueLight);
     drawStatBar(ctx, pad, row2, labelW, barX + halfW + 8, halfW, barH, '气节', intProg, COLORS.redLight);
 
-    ctx.font = compact ? '10px KaiTi, serif' : '11px KaiTi, serif';
+    ctx.font = `${u(compact ? 11 : 13)}px KaiTi, serif`;
     ctx.fillStyle = COLORS.inkLight;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
@@ -130,19 +142,19 @@ const Renderer = (() => {
     ctx.fillText(`${Math.round(integrity ?? 0)}`, w - pad, row2 + barH / 2);
 
     if (amnestyLeft > 0) {
-      ctx.font = compact ? 'bold 10px KaiTi, serif' : 'bold 11px KaiTi, serif';
+      ctx.font = `bold ${u(12)}px KaiTi, serif`;
       ctx.fillStyle = '#8a6020';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       ctx.fillText(`免死金牌 ${amnestyLeft.toFixed(0)}s`, pad, compact ? 56 : 62);
     }
 
-    drawMiniLegend(ctx, pad, amnestyLeft > 0 ? (compact ? 68 : 76) : (compact ? 58 : 66), w - pad * 2);
+    drawMiniLegend(ctx, pad, amnestyLeft > 0 ? (compact ? u(72) : u(84)) : (compact ? u(62) : u(74)), w - pad * 2);
     ctx.restore();
   }
 
   function drawStatBar(ctx, padX, y, labelW, barX, barW, barH, label, pct, color) {
-    ctx.font = 'bold 13px KaiTi, serif';
+    ctx.font = `bold ${u(14)}px KaiTi, serif`;
     ctx.fillStyle = COLORS.inkMid;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
@@ -174,18 +186,18 @@ const Renderer = (() => {
       { c: '#e8d080', t: '免' }
     ];
     const chipW = totalW / items.length;
-    ctx.font = '10px KaiTi, serif';
+    ctx.font = `${u(11)}px KaiTi, serif`;
     items.forEach((it, i) => {
       const cx = x + i * chipW;
       ctx.fillStyle = it.c;
-      roundRect(ctx, cx, y, 12, 12, 2);
+      roundRect(ctx, cx, y, u(13), u(13), 2);
       ctx.fill();
       ctx.strokeStyle = 'rgba(26,18,8,0.25)';
       ctx.stroke();
       ctx.fillStyle = COLORS.inkLight;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      ctx.fillText(it.t, cx + 14, y + 1);
+      ctx.fillText(it.t, cx + u(15), y + 1);
     });
   }
 
@@ -203,7 +215,7 @@ const Renderer = (() => {
       ctx.lineWidth = 1;
       ctx.stroke();
       ctx.fillStyle = COLORS.inkMid;
-      ctx.font = 'bold 14px KaiTi, serif';
+      ctx.font = `bold ${u(16)}px KaiTi, serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(LANE_NAMES[i], lx + laneWidth / 2, laneHeaderY + laneHeaderH / 2);
@@ -347,9 +359,9 @@ const Renderer = (() => {
     }
 
     if (name) {
-      ctx.font = '10px KaiTi, STKaiti, serif';
-      const tw = Math.min(58, Math.max(34, ctx.measureText(name).width + 10));
-      const th = 14;
+      ctx.font = `${u(11)}px KaiTi, STKaiti, serif`;
+      const tw = Math.min(u(72), Math.max(u(40), ctx.measureText(name).width + u(12)));
+      const th = u(16);
       const tx = x - tw / 2;
       const ty = headY - headR * (mini ? 1.15 : 1.35);
       ctx.fillStyle = 'rgba(248,242,228,0.92)';
@@ -639,7 +651,7 @@ const Renderer = (() => {
     ctx.fill();
     ctx.stroke();
 
-    const fs = Math.max(12, Math.min(16, w * 0.22));
+    const fs = Math.max(u(13), Math.min(u(18), w * 0.22));
     ctx.fillStyle = '#fff';
     ctx.font = `bold ${fs}px KaiTi, serif`;
     ctx.textAlign = 'left';
@@ -694,8 +706,9 @@ const Renderer = (() => {
   }
 
   function drawRankPanel(ctx, panelX, panelW, h, ranks, meta) {
-    const pad = 6;
+    const pad = u(8);
     const innerW = panelW - pad * 2;
+    const scale = meta?.uiScale || activeLayout.uiScale || 1;
     const { age, ageProgress, tenureLeft, tenureLabel, startAge } = meta || {};
 
     ctx.fillStyle = COLORS.paperDeep;
@@ -705,39 +718,39 @@ const Renderer = (() => {
     ctx.fillRect(panelX, 0, 4, h);
 
     ctx.fillStyle = COLORS.ink;
-    ctx.font = 'bold 15px KaiTi, serif';
+    ctx.font = `bold ${Math.round(15 * scale)}px KaiTi, serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText('官职梯', panelX + panelW / 2, 8);
+    ctx.fillText('官职梯', panelX + panelW / 2, u(8));
 
     ctx.fillStyle = COLORS.gold;
-    ctx.font = 'bold 22px KaiTi, serif';
-    ctx.fillText(`年齿 ${age ?? startAge ?? 24} 岁`, panelX + panelW / 2, 28);
+    ctx.font = `bold ${Math.round(24 * scale)}px KaiTi, serif`;
+    ctx.fillText(`年齿 ${age ?? startAge ?? 24} 岁`, panelX + panelW / 2, u(30));
 
     const barX = panelX + pad + 4;
-    const barY = 54;
+    const barY = u(58);
     const barW = innerW - 8;
     ctx.fillStyle = '#d5cdb8';
-    roundRect(ctx, barX, barY, barW, 8, 2);
+    roundRect(ctx, barX, barY, barW, u(10), 2);
     ctx.fill();
     if (ageProgress > 0) {
       ctx.fillStyle = COLORS.gold;
-      roundRect(ctx, barX, barY, Math.max(3, barW * ageProgress), 8, 2);
+      roundRect(ctx, barX, barY, Math.max(3, barW * ageProgress), u(10), 2);
       ctx.fill();
     }
     ctx.strokeStyle = 'rgba(59,47,30,0.3)';
-    roundRect(ctx, barX, barY, barW, 8, 2);
+    roundRect(ctx, barX, barY, barW, u(10), 2);
     ctx.stroke();
 
-    ctx.font = '12px KaiTi, serif';
+    ctx.font = `${Math.round(13 * scale)}px KaiTi, serif`;
     ctx.fillStyle = COLORS.inkMid;
     ctx.textAlign = 'left';
-    ctx.fillText('寿序', panelX + pad + 4, 66);
+    ctx.fillText('寿序', panelX + pad + 4, u(72));
     ctx.textAlign = 'right';
-    ctx.fillText(`${tenureLabel || '任期余'} ${tenureLeft || '—'}`, panelX + pad + innerW - 4, 66);
+    ctx.fillText(`${tenureLabel || '任期余'} ${tenureLeft || '—'}`, panelX + pad + innerW - 4, u(72));
 
-    const rowH = 58;
-    const startY = 86;
+    const rowH = Math.round(62 * scale);
+    const startY = u(92);
 
     ranks.forEach((r, ti) => {
       const ty = startY + ti * rowH;
@@ -752,13 +765,13 @@ const Renderer = (() => {
       ctx.stroke();
 
       ctx.fillStyle = r.flash > 0 ? COLORS.gold : COLORS.ink;
-      ctx.font = 'bold 13px KaiTi, serif';
+      ctx.font = `bold ${Math.round(14 * scale)}px KaiTi, serif`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       ctx.fillText(r.label, panelX + pad + 5, ty + 4);
 
       ctx.textAlign = 'right';
-      ctx.font = '11px KaiTi, serif';
+      ctx.font = `${Math.round(12 * scale)}px KaiTi, serif`;
       if (r.index < 0) {
         ctx.fillStyle = COLORS.inkLight;
         ctx.fillText('未授', panelX + pad + innerW - 5, ty + 5);
@@ -775,7 +788,7 @@ const Renderer = (() => {
       const barW = innerW - 10;
       const gap = 1;
       const cellW = Math.max(3, (barW - gap * (total - 1)) / total);
-      const cellH = 9;
+      const cellH = u(10);
       const prog = r.index < 0 ? -1 : r.index;
 
       for (let i = 0; i < total; i++) {
@@ -793,7 +806,7 @@ const Renderer = (() => {
       }
 
       ctx.fillStyle = COLORS.inkMid;
-      ctx.font = '12px KaiTi, serif';
+      ctx.font = `${Math.round(13 * scale)}px KaiTi, serif`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       const name = ellipsize(ctx, r.current.name, innerW - 10);
@@ -801,7 +814,7 @@ const Renderer = (() => {
 
       if (r.index >= 0 && r.index < r.max && r.next?.name) {
         ctx.fillStyle = COLORS.inkLight;
-        ctx.font = '10px KaiTi, serif';
+        ctx.font = `${Math.round(11 * scale)}px KaiTi, serif`;
         ctx.fillText(
           '→ ' + ellipsize(ctx, r.next.name, innerW - 16),
           panelX + pad + 5,
@@ -813,8 +826,8 @@ const Renderer = (() => {
 
   function drawRankPanelBottom(ctx, layout, ranks, meta) {
     const { panelY, panelW, bottomPanelH } = layout;
-    const pad = 6;
-    const { tenureLeft, tenureLabel } = meta || {};
+    const scale = meta?.uiScale || layout?.uiScale || 1.1;
+    const pad = u(8);
 
     ctx.fillStyle = COLORS.paperDeep;
     ctx.fillRect(0, panelY, panelW, bottomPanelH);
@@ -822,18 +835,18 @@ const Renderer = (() => {
     ctx.fillRect(0, panelY, panelW, 3);
 
     ctx.fillStyle = COLORS.ink;
-    ctx.font = 'bold 12px KaiTi, serif';
+    ctx.font = `bold ${Math.round(14 * scale)}px KaiTi, serif`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText('官职梯', pad, panelY + 6);
+    ctx.fillText('官职梯', pad, panelY + u(8));
 
     ctx.textAlign = 'right';
     ctx.fillStyle = COLORS.inkMid;
-    ctx.font = '11px KaiTi, serif';
-    ctx.fillText(`${tenureLabel || '任期余'} ${tenureLeft || '—'}`, panelW - pad, panelY + 7);
+    ctx.font = `${Math.round(13 * scale)}px KaiTi, serif`;
+    ctx.fillText(`${meta?.tenureLabel || '任期余'} ${meta?.tenureLeft || '—'}`, panelW - pad, panelY + u(9));
 
     const colW = (panelW - pad * 2) / ranks.length;
-    const startY = panelY + 22;
+    const startY = panelY + u(28);
 
     ranks.forEach((r, i) => {
       const cx = pad + i * colW;
@@ -841,33 +854,33 @@ const Renderer = (() => {
       const total = r.max + 1;
 
       ctx.fillStyle = r.flash > 0 ? 'rgba(201,168,76,0.22)' : 'rgba(248,242,228,0.55)';
-      roundRect(ctx, cx, startY, innerW, bottomPanelH - 28, 3);
+      roundRect(ctx, cx, startY, innerW, bottomPanelH - u(30), 3);
       ctx.fill();
       ctx.strokeStyle = r.flash > 0 ? COLORS.gold : 'rgba(122,104,72,0.3)';
       ctx.lineWidth = 1;
       ctx.stroke();
 
       ctx.fillStyle = r.flash > 0 ? COLORS.gold : COLORS.ink;
-      ctx.font = 'bold 10px KaiTi, serif';
+      ctx.font = `bold ${Math.round(12 * scale)}px KaiTi, serif`;
       ctx.textAlign = 'center';
-      ctx.fillText(r.label, cx + innerW / 2, startY + 3);
+      ctx.fillText(r.label, cx + innerW / 2, startY + u(4));
 
-      ctx.font = '9px KaiTi, serif';
+      ctx.font = `${Math.round(11 * scale)}px KaiTi, serif`;
       ctx.fillStyle = COLORS.inkMid;
       if (r.index < 0) {
-        ctx.fillText('未授', cx + innerW / 2, startY + 14);
+        ctx.fillText('未授', cx + innerW / 2, startY + u(16));
       } else if (r.index >= r.max) {
-        ctx.fillText('顶格', cx + innerW / 2, startY + 14);
+        ctx.fillText('顶格', cx + innerW / 2, startY + u(16));
       } else {
-        ctx.fillText(`${r.index + 1}/${total}`, cx + innerW / 2, startY + 14);
+        ctx.fillText(`${r.index + 1}/${total}`, cx + innerW / 2, startY + u(16));
       }
 
       const barX = cx + 3;
-      const barY = startY + 24;
+      const barY = startY + u(26);
       const barW = innerW - 6;
       const gap = 1;
       const cellW = Math.max(2, (barW - gap * (total - 1)) / total);
-      const cellH = 5;
+      const cellH = u(6);
       const prog = r.index < 0 ? -1 : r.index;
 
       for (let j = 0; j < total; j++) {
@@ -878,11 +891,10 @@ const Renderer = (() => {
         ctx.fill();
       }
 
-      ctx.fillStyle = COLORS.inkMid;
-      ctx.font = '9px KaiTi, serif';
+      ctx.font = `${Math.round(11 * scale)}px KaiTi, serif`;
       ctx.textAlign = 'center';
       const name = ellipsize(ctx, r.current.name, innerW - 4);
-      ctx.fillText(name, cx + innerW / 2, startY + 34);
+      ctx.fillText(name, cx + innerW / 2, startY + u(38));
     });
   }
 
@@ -991,7 +1003,7 @@ const Renderer = (() => {
   }
 
   return {
-    COLORS, aabb, drawPaperTexture, drawPlayChrome, drawHud, drawLaneHeaders,
+    COLORS, aabb, setLayout, drawPaperTexture, drawPlayChrome, drawHud, drawLaneHeaders,
     drawLanes, drawPlayer, drawNpc, drawAmnesty, drawObstacle, drawSpecial, drawCoronationRobe, drawCoronationBanner,
     drawPickup, drawCoin, drawMerit,
     drawRankPanel, drawRankPanelBottom, drawToast, drawAmbientBanner, drawOverlay, LANE_NAMES

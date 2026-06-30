@@ -33,14 +33,21 @@ body::before {
 
 #wrap {
   position: relative;
-  width: min(94vw, 900px);
-  max-width: 900px;
+  width: 100%;
+  max-width: none;
   height: 100vh;
   height: 100dvh;
-  margin: 0 auto;
+  margin: 0;
   z-index: 1;
-  box-shadow: 0 0 24px rgba(26, 18, 8, 0.12);
+  box-shadow: none;
   background: var(--paper-mid);
+}
+
+@media (min-width: 641px) {
+  .btn-pause {
+    font-size: 1.05rem;
+    padding: 8px 18px;
+  }
 }
 
 @media (max-width: 640px) {

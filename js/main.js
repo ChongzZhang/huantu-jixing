@@ -6,10 +6,9 @@ const START_AGE = 24;
 const SECONDS_PER_YEAR = 8; // 9.6÷1.2，年齿增速为上一版 1.2 倍
 const AGE_DEATH_START = 51;
 const AGE_DEATH_RAMP = 66;
-const PANEL_W = 280;
-const DESKTOP_MAX_W = 900;
-const HUD_TOP = 118;
-const HUD_TOP_MOBILE = 102;
+const PANEL_W = 340;
+const HUD_TOP = 142;
+const HUD_TOP_MOBILE = 108;
 
 const Game = (() => {
   let canvas, ctx, input;
@@ -27,18 +26,23 @@ const Game = (() => {
   let sessionNpcKnockouts = 0;
 
   function isMobileLayout() {
-    return cssW > 0 && cssW < 640;
+    return window.matchMedia('(max-width: 640px)').matches;
+  }
+
+  function layoutUiScale() {
+    if (isMobileLayout()) return 1.1;
+    return Math.min(1.55, Math.max(1.3, cssW / 680));
   }
 
   function layoutPanelW() {
     if (isMobileLayout()) return 0;
-    return Math.round(Math.max(240, Math.min(PANEL_W, cssW * 0.29)));
+    return Math.round(Math.max(260, Math.min(PANEL_W, cssW * 0.22)));
   }
 
   function layoutDpr() {
     const raw = window.devicePixelRatio || 1;
     if (isMobileLayout()) return Math.min(raw, 2);
-    return Math.min(Math.max(raw, 2), 2.5);
+    return Math.min(Math.max(raw, 2), 3);
   }
 
   function layoutHudTop() {
@@ -50,6 +54,7 @@ const Game = (() => {
       mobile: isMobileLayout()
     });
     layout.isMobile = isMobileLayout();
+    layout.uiScale = layoutUiScale();
   }
 
   function updateControlHints() {
@@ -205,10 +210,10 @@ const Game = (() => {
   function resize() {
     const wrap = document.getElementById('wrap');
     const vp = window.visualViewport;
+    const mobile = isMobileLayout();
     dpr = layoutDpr();
-    cssW = Math.round(wrap?.clientWidth || window.innerWidth || DESKTOP_MAX_W);
-    const narrow = cssW < 640;
-    cssH = Math.round(narrow && vp?.height ? vp.height : window.innerHeight);
+    cssW = Math.round(mobile ? (wrap?.clientWidth || window.innerWidth) : window.innerWidth);
+    cssH = Math.round(mobile && vp?.height ? vp.height : window.innerHeight);
     if (cssH < 400) cssH = Math.max(400, window.innerHeight);
     canvas.width = Math.round(cssW * dpr);
     canvas.height = Math.round(cssH * dpr);
@@ -760,6 +765,7 @@ const Game = (() => {
     }
     if (!player) return;
 
+    Renderer.setLayout(layout);
     Renderer.drawPlayChrome(ctx, layout, h);
     Renderer.drawHud(ctx, layout.playAreaW, layout.hudH, {
       playerName,
@@ -771,7 +777,7 @@ const Game = (() => {
       safety: player.safety,
       integrity: player.integrity,
       amnestyLeft: player.amnestyLeft || 0
-    }, layout.isMobile);
+    }, layout);
     Renderer.drawLaneHeaders(ctx, layout);
     Renderer.drawLanes(ctx, layout, layout.playHeight);
 
@@ -793,7 +799,8 @@ const Game = (() => {
 
     const tenureMeta = {
       tenureLeft: formatTenureLeft(),
-      tenureLabel: tenureHudLabel()
+      tenureLabel: tenureHudLabel(),
+      uiScale: layout.uiScale
     };
     if (layout.mode === 'bottom') {
       Renderer.drawRankPanelBottom(ctx, layout, Ranks.getState(), tenureMeta);
@@ -803,6 +810,7 @@ const Game = (() => {
         ageProgress: getAgeProgress(),
         tenureLeft: tenureMeta.tenureLeft,
         tenureLabel: tenureMeta.tenureLabel,
+        uiScale: layout.uiScale,
         startAge: START_AGE
       });
     }
