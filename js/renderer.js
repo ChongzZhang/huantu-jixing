@@ -629,7 +629,6 @@ const Renderer = (() => {
     const x = p.x - w / 2;
     const y = p.y - h / 2;
     const fill = PickupFx.fillColor(p, COLORS);
-    const badge = PickupFx.shortBadge(p);
     const effect = PickupFx.effectLabel(p);
     const steps = PickupFx.resolveSteps(p);
 
@@ -647,33 +646,11 @@ const Renderer = (() => {
     ctx.textBaseline = 'top';
     ctx.fillText(p.name.length > 4 ? p.name.slice(0, 4) : p.name, x + 4, y + 3);
 
-    if (steps > 0) {
-      ctx.textAlign = 'right';
-      ctx.fillText(badge, x + w - 4, y + 3);
-    } else if (p.coinValue || p.meritValue) {
-      ctx.textAlign = 'right';
-      ctx.fillText(badge, x + w - 4, y + 3);
-    }
-
     ctx.font = `${fs - 1}px KaiTi, serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     const line2 = (p.coinValue || p.meritValue) ? effect : (steps === 0 ? (p.brief || '无变动') : effect);
     ctx.fillText(ellipsize(ctx, line2, w - 8), p.x, y + h - 3);
-
-    const fm = p.fallMult ?? 1;
-    if (fm >= 1.18) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-      ctx.beginPath();
-      ctx.moveTo(p.x, y - 4);
-      ctx.lineTo(p.x, y - 11);
-      ctx.stroke();
-    } else if (fm <= 0.72) {
-      ctx.fillStyle = 'rgba(255,255,255,0.35)';
-      ctx.font = '9px KaiTi, serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('缓', p.x, y - 3);
-    }
   }
 
   function drawCoin(ctx, c) {

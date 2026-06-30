@@ -6,8 +6,8 @@ const START_AGE = 24;
 const SECONDS_PER_YEAR = 8; // 9.6÷1.2，年齿增速为上一版 1.2 倍
 const AGE_DEATH_START = 51;
 const AGE_DEATH_RAMP = 66;
-const PANEL_W = 239;
-const DESKTOP_W = 598;
+const PANEL_W = 280;
+const DESKTOP_MAX_W = 900;
 const HUD_TOP = 118;
 const HUD_TOP_MOBILE = 102;
 
@@ -32,7 +32,13 @@ const Game = (() => {
 
   function layoutPanelW() {
     if (isMobileLayout()) return 0;
-    return PANEL_W;
+    return Math.round(Math.max(240, Math.min(PANEL_W, cssW * 0.29)));
+  }
+
+  function layoutDpr() {
+    const raw = window.devicePixelRatio || 1;
+    if (isMobileLayout()) return Math.min(raw, 2);
+    return Math.min(Math.max(raw, 2), 2.5);
   }
 
   function layoutHudTop() {
@@ -199,8 +205,8 @@ const Game = (() => {
   function resize() {
     const wrap = document.getElementById('wrap');
     const vp = window.visualViewport;
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    cssW = Math.round(wrap?.clientWidth || window.innerWidth || DESKTOP_W);
+    dpr = layoutDpr();
+    cssW = Math.round(wrap?.clientWidth || window.innerWidth || DESKTOP_MAX_W);
     const narrow = cssW < 640;
     cssH = Math.round(narrow && vp?.height ? vp.height : window.innerHeight);
     if (cssH < 400) cssH = Math.max(400, window.innerHeight);

@@ -2,6 +2,7 @@
 const Lanes = (() => {
   const COUNT = 3;
   const LANE_W_MAX = 92;
+  const LANE_W_MAX_DESKTOP = 118;
   const GUTTER = 8;
 
   function trackWidth(laneWidth) {
@@ -50,11 +51,12 @@ const Lanes = (() => {
     }
 
     const playAreaW = canvasW - panelW;
-    const margin = 6;
+    const margin = 4;
     const available = playAreaW - margin * 2;
+    const laneMax = mobile ? LANE_W_MAX : LANE_W_MAX_DESKTOP;
     const laneWidth = Math.max(
       58,
-      Math.min(LANE_W_MAX, Math.floor((available - GUTTER * (COUNT - 1)) / COUNT))
+      Math.min(laneMax, Math.floor((available - GUTTER * (COUNT - 1)) / COUNT))
     );
     const tw = trackWidth(laneWidth);
     const trackLeft = margin + Math.max(0, (playAreaW - tw) / 2);
