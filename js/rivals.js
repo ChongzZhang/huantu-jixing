@@ -5,8 +5,8 @@ const Rivals = (() => {
   const ROBES = ['#4a5878', '#5a4848'];
   const AVOID_RADIUS = 150;
   const PANIC_RADIUS = 75;
-  const AVOID_PUSH = 280;
-  const PANIC_PUSH_MULT = 2.4;
+  const AVOID_PUSH = 165;
+  const PANIC_PUSH_MULT = 2.2;
 
   let list = [];
   let onKnockout = null;
@@ -117,38 +117,16 @@ const Rivals = (() => {
   }
 
   function chaseToward(actor, tx, ty, dt) {
-    AiMove.smoothChase(actor, tx, ty, dt);
-  }
-
-  function nearestBadDist(rival, badPickups) {
-    let min = Infinity;
-    badPickups.forEach((p) => {
-      const d = Math.hypot(rival.x - p.x, rival.y - p.y);
-      if (d < min) min = d;
-    });
-    return min;
+    AiMove.steerToward(actor, tx, ty, dt);
   }
 
   function applyAvoidance(rival, badPickups, dt) {
-    const panic = nearestBadDist(rival, badPickups) < PANIC_RADIUS;
-    let ax = 0;
-    let ay = 0;
-    badPickups.forEach((p) => {
-      const dx = rival.x - p.x;
-      const dy = rival.y - p.y;
-      const dist = Math.hypot(dx, dy);
-      if (dist >= AVOID_RADIUS || dist < 1) return;
-      const t = (AVOID_RADIUS - dist) / AVOID_RADIUS;
-      const weight = t * t * (dist < PANIC_RADIUS ? 1.35 : 1);
-      ax += (dx / dist) * weight;
-      ay += (dy / dist) * weight;
-    });
-    const mag = Math.hypot(ax, ay);
-    if (mag > 0.01) {
-      const push = AVOID_PUSH * (panic ? PANIC_PUSH_MULT : 1.15) * dt;
-      rival.x += (ax / mag) * push;
-      rival.y += (ay / mag) * push;
-    }
+    AiMove.applyAvoidance(rival, badPickups, {
+      radius: AVOID_RADIUS,
+      panicRadius: PANIC_RADIUS,
+      pushBase: AVOID_PUSH,
+      panicMult: PANIC_PUSH_MULT
+    }, dt);
   }
 
   function launchKnockfly(rival, pickupName, reason) {
@@ -196,6 +174,8 @@ const Rivals = (() => {
     rival.respawnCd = 0;
     rival.fade = 1;
     rival.moveSpeed = Difficulty.rivalSpeed(rival.slot);
+    rival.vx = 0;
+    rival.vy = 0;
     const pos = spawnPos(layout, rival.slot);
     rival.x = pos.x;
     rival.y = pos.y;
@@ -246,12 +226,15 @@ const Rivals = (() => {
     rival.pulse += dt * 4;
     if (rival.grabCd > 0) rival.grabCd -= dt;
     AiMove.tickHold(rival, dt);
-
-    AiMove.applySeparation(rival, peers, dt);
-    applyAvoidance(rival, badPickups, dt);
+    Difficulty.applyRivalSpeed(rival);
 
     const target = findNearestGood(rival, goodItems, peers);
     if (target) chaseToward(rival, target.x, target.y, dt);
+
+    AiMove.applySeparation(rival, peers, dt);
+    applyAvoidance(rival, badPickups, dt);
+    AiMove.integrate(rival, dt);
+    AiMove.clampSpeed(rival, rival.moveSpeed * 1.15);
 
     clampPos(rival, layout);
   }

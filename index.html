@@ -2,7 +2,10 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>宦途疾行</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -24,7 +27,8 @@
         </label>
         <button type="button" id="btn-start" class="btn-primary">开跑</button>
         <button type="button" id="btn-codex" class="btn-secondary">典故图鉴</button>
-        <p class="hint">鼠标跟随 · 碰触拾取（奏章同） · P 暂停</p>
+        <p class="hint hint-mouse">鼠标跟随 · 碰触拾取（奏章同） · P 暂停</p>
+        <p class="hint hint-touch hidden">触屏跟随移动 · 碰触拾取 · 点右上角暂停</p>
         <p id="load-hint" class="load-hint"></p>
       </div>
     </div>

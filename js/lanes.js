@@ -8,7 +8,47 @@ const Lanes = (() => {
     return laneWidth * COUNT + GUTTER * (COUNT - 1);
   }
 
-  function compute(canvasW, canvasH, panelW, hudTop) {
+  function compute(canvasW, canvasH, panelW, hudTop, opts = {}) {
+    const mobile = opts.mobile;
+    const laneHeaderH = 24;
+    const hudH = hudTop || 120;
+    const playTop = hudH + laneHeaderH;
+
+    if (mobile) {
+      const bottomPanelH = Math.min(118, Math.max(96, Math.floor(canvasH * 0.15)));
+      const playAreaW = canvasW;
+      const margin = 8;
+      const available = playAreaW - margin * 2;
+      const laneWidth = Math.max(
+        68,
+        Math.min(LANE_W_MAX, Math.floor((available - GUTTER * (COUNT - 1)) / COUNT))
+      );
+      const tw = trackWidth(laneWidth);
+      const trackLeft = margin + Math.max(0, (playAreaW - tw) / 2);
+      const panelY = canvasH - bottomPanelH;
+
+      return {
+        mode: 'bottom',
+        laneWidth,
+        gutter: GUTTER,
+        trackLeft,
+        trackWidth: tw,
+        playLeft: 0,
+        playWidth: playAreaW,
+        playAreaW,
+        playTop,
+        playHeight: Math.max(120, panelY - playTop - 6),
+        panelW: canvasW,
+        panelX: 0,
+        panelY,
+        bottomPanelH,
+        hudH,
+        laneHeaderY: hudH,
+        laneHeaderH,
+        isMobile: true
+      };
+    }
+
     const playAreaW = canvasW - panelW;
     const margin = 6;
     const available = playAreaW - margin * 2;
@@ -18,11 +58,9 @@ const Lanes = (() => {
     );
     const tw = trackWidth(laneWidth);
     const trackLeft = margin + Math.max(0, (playAreaW - tw) / 2);
-    const laneHeaderH = 24;
-    const hudH = hudTop || 120;
-    const playTop = hudH + laneHeaderH;
 
     return {
+      mode: 'side',
       laneWidth,
       gutter: GUTTER,
       trackLeft,
@@ -36,7 +74,8 @@ const Lanes = (() => {
       panelX: canvasW - panelW,
       hudH,
       laneHeaderY: hudH,
-      laneHeaderH
+      laneHeaderH,
+      isMobile: false
     };
   }
 

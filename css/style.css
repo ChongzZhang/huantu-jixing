@@ -15,7 +15,10 @@ body {
   background: var(--paper-mid);
   color: var(--ink-dark);
   min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body::before {
@@ -33,10 +36,58 @@ body::before {
   width: 100%;
   max-width: 520px;
   height: 100vh;
+  height: 100dvh;
   margin: 0 auto;
   z-index: 1;
   box-shadow: 0 0 24px rgba(26, 18, 8, 0.12);
   background: var(--paper-mid);
+}
+
+@media (max-width: 640px), (pointer: coarse) {
+  body {
+    margin: 0;
+  }
+
+  #wrap {
+    max-width: none;
+    width: 100%;
+    position: fixed;
+    inset: 0;
+    height: 100dvh;
+    box-shadow: none;
+  }
+
+  .btn-pause {
+    top: max(8px, env(safe-area-inset-top, 8px));
+    right: max(8px, env(safe-area-inset-right, 8px));
+    font-size: 1rem;
+    padding: 10px 16px;
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .menu-panel {
+    padding: 24px 20px;
+    max-width: 92vw;
+  }
+
+  .menu-panel h1 {
+    font-size: 2.1rem;
+  }
+
+  .panel label {
+    font-size: 1.05rem;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    min-height: 48px;
+    font-size: 1.1rem;
+  }
+
+  #game {
+    cursor: default;
+  }
 }
 
 #game {

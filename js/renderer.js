@@ -57,6 +57,15 @@ const Renderer = (() => {
   }
 
   function drawPlayChrome(ctx, layout, h) {
+    if (layout.mode === 'bottom') {
+      ctx.fillStyle = COLORS.paperDark;
+      ctx.fillRect(0, 0, layout.playAreaW, layout.panelY);
+      ctx.fillStyle = COLORS.paperDeep;
+      ctx.fillRect(0, layout.panelY, layout.panelW, layout.bottomPanelH);
+      ctx.fillStyle = 'rgba(26,18,8,0.15)';
+      ctx.fillRect(0, layout.panelY, layout.playAreaW, 3);
+      return;
+    }
     const { playAreaW, panelX } = layout;
     ctx.fillStyle = COLORS.paperDark;
     ctx.fillRect(0, 0, playAreaW, h);
@@ -66,7 +75,7 @@ const Renderer = (() => {
     ctx.fillRect(playAreaW, 0, 3, h);
   }
 
-  function drawHud(ctx, w, hudH, state) {
+  function drawHud(ctx, w, hudH, state, compact) {
     ctx.save();
     const grad = ctx.createLinearGradient(0, 0, 0, hudH);
     grad.addColorStop(0, '#f4ecda');
@@ -80,26 +89,26 @@ const Renderer = (() => {
     ctx.lineTo(w, hudH - 1);
     ctx.stroke();
 
-    const pad = 10;
+    const pad = compact ? 6 : 10;
     const { playerName, age, coinBank, coinNeed, meritBank, meritNeed, safety, integrity, amnestyLeft } = state;
 
-    ctx.font = 'bold 16px KaiTi, STKaiti, serif';
+    ctx.font = compact ? 'bold 14px KaiTi, STKaiti, serif' : 'bold 16px KaiTi, STKaiti, serif';
     ctx.fillStyle = COLORS.ink;
     ctx.textBaseline = 'top';
     ctx.textAlign = 'left';
     ctx.fillText(`庆历 · ${playerName || '沈砚青'}`, pad, 6);
-    ctx.font = '13px KaiTi, serif';
+    ctx.font = compact ? '12px KaiTi, serif' : '13px KaiTi, serif';
     ctx.fillStyle = COLORS.inkMid;
     ctx.textAlign = 'right';
     ctx.fillText(`年齿 ${age ?? 24} 岁`, w - pad, 8);
 
-    const labelW = 34;
-    const barX = pad + labelW + 6;
-    const barW = w - pad * 2 - labelW - 6;
+    const labelW = compact ? 30 : 34;
+    const barX = pad + labelW + (compact ? 4 : 6);
+    const barW = w - pad * 2 - labelW - (compact ? 4 : 6);
     const halfW = (barW - 8) / 2;
-    const row1 = 28;
-    const row2 = 46;
-    const barH = 11;
+    const row1 = compact ? 26 : 28;
+    const row2 = compact ? 42 : 46;
+    const barH = compact ? 9 : 11;
 
     const coinProg = coinNeed ? Math.min(1, coinBank / coinNeed) : 0;
     const meritProg = meritNeed ? Math.min(1, meritBank / meritNeed) : 0;
@@ -111,7 +120,7 @@ const Renderer = (() => {
     drawStatBar(ctx, pad, row2, labelW, barX, halfW, barH, '安危', safeProg, COLORS.blueLight);
     drawStatBar(ctx, pad, row2, labelW, barX + halfW + 8, halfW, barH, '气节', intProg, COLORS.redLight);
 
-    ctx.font = '11px KaiTi, serif';
+    ctx.font = compact ? '10px KaiTi, serif' : '11px KaiTi, serif';
     ctx.fillStyle = COLORS.inkLight;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
@@ -121,14 +130,14 @@ const Renderer = (() => {
     ctx.fillText(`${Math.round(integrity ?? 0)}`, w - pad, row2 + barH / 2);
 
     if (amnestyLeft > 0) {
-      ctx.font = 'bold 11px KaiTi, serif';
+      ctx.font = compact ? 'bold 10px KaiTi, serif' : 'bold 11px KaiTi, serif';
       ctx.fillStyle = '#8a6020';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      ctx.fillText(`免死金牌 ${amnestyLeft.toFixed(0)}s`, pad, 62);
+      ctx.fillText(`免死金牌 ${amnestyLeft.toFixed(0)}s`, pad, compact ? 56 : 62);
     }
 
-    drawMiniLegend(ctx, pad, amnestyLeft > 0 ? 76 : 66, w - pad * 2);
+    drawMiniLegend(ctx, pad, amnestyLeft > 0 ? (compact ? 68 : 76) : (compact ? 58 : 66), w - pad * 2);
     ctx.restore();
   }
 
@@ -767,13 +776,92 @@ const Renderer = (() => {
     });
   }
 
+  function drawRankPanelBottom(ctx, layout, ranks, meta) {
+    const { panelY, panelW, bottomPanelH } = layout;
+    const pad = 6;
+    const { tenureLeft } = meta || {};
+
+    ctx.fillStyle = COLORS.paperDeep;
+    ctx.fillRect(0, panelY, panelW, bottomPanelH);
+    ctx.fillStyle = COLORS.seal;
+    ctx.fillRect(0, panelY, panelW, 3);
+
+    ctx.fillStyle = COLORS.ink;
+    ctx.font = 'bold 12px KaiTi, serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('官职梯', pad, panelY + 6);
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = COLORS.inkMid;
+    ctx.font = '11px KaiTi, serif';
+    ctx.fillText(`任期余 ${tenureLeft || '—'}`, panelW - pad, panelY + 7);
+
+    const colW = (panelW - pad * 2) / ranks.length;
+    const startY = panelY + 22;
+
+    ranks.forEach((r, i) => {
+      const cx = pad + i * colW;
+      const innerW = colW - 4;
+      const total = r.max + 1;
+
+      ctx.fillStyle = r.flash > 0 ? 'rgba(201,168,76,0.22)' : 'rgba(248,242,228,0.55)';
+      roundRect(ctx, cx, startY, innerW, bottomPanelH - 28, 3);
+      ctx.fill();
+      ctx.strokeStyle = r.flash > 0 ? COLORS.gold : 'rgba(122,104,72,0.3)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.fillStyle = r.flash > 0 ? COLORS.gold : COLORS.ink;
+      ctx.font = 'bold 10px KaiTi, serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(r.label, cx + innerW / 2, startY + 3);
+
+      ctx.font = '9px KaiTi, serif';
+      ctx.fillStyle = COLORS.inkMid;
+      if (r.index < 0) {
+        ctx.fillText('未授', cx + innerW / 2, startY + 14);
+      } else if (r.index >= r.max) {
+        ctx.fillText('顶格', cx + innerW / 2, startY + 14);
+      } else {
+        ctx.fillText(`${r.index + 1}/${total}`, cx + innerW / 2, startY + 14);
+      }
+
+      const barX = cx + 3;
+      const barY = startY + 24;
+      const barW = innerW - 6;
+      const gap = 1;
+      const cellW = Math.max(2, (barW - gap * (total - 1)) / total);
+      const cellH = 5;
+      const prog = r.index < 0 ? -1 : r.index;
+
+      for (let j = 0; j < total; j++) {
+        const bx = barX + j * (cellW + gap);
+        const filled = prog >= 0 && j <= prog;
+        ctx.fillStyle = filled ? COLORS.gold : '#d8d0bc';
+        roundRect(ctx, bx, barY, cellW, cellH, 1);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = COLORS.inkMid;
+      ctx.font = '9px KaiTi, serif';
+      ctx.textAlign = 'center';
+      const name = ellipsize(ctx, r.current.name, innerW - 4);
+      ctx.fillText(name, cx + innerW / 2, startY + 34);
+    });
+  }
+
   function drawToast(ctx, layout, canvasH, toast, alpha) {
     if (!toast || alpha <= 0) return;
     const pad = 8;
-    const tw = layout.panelW - pad * 2;
+    const tw = layout.mode === 'bottom'
+      ? Math.min(layout.playAreaW - pad * 2, 280)
+      : layout.panelW - pad * 2;
     const th = 46;
-    const tx = layout.panelX + pad;
-    const ty = canvasH - th - 10;
+    const tx = layout.mode === 'bottom' ? pad : layout.panelX + pad;
+    const ty = layout.mode === 'bottom'
+      ? layout.panelY - th - 8
+      : canvasH - th - 10;
 
     ctx.save();
     ctx.globalAlpha = alpha;
@@ -807,10 +895,12 @@ const Renderer = (() => {
     const bh = 14;
     const x = banner.x;
     const w = banner.w;
+    const clipX = layout.mode === 'bottom' ? 0 : layout.panelX;
+    const clipW = layout.mode === 'bottom' ? layout.playAreaW : layout.panelW;
 
     ctx.save();
     ctx.beginPath();
-    ctx.rect(layout.panelX, y - 1, layout.panelW, bh + 2);
+    ctx.rect(clipX, y - 1, clipW, bh + 2);
     ctx.clip();
     ctx.globalAlpha = 0.92;
     ctx.fillStyle = 'rgba(26,18,8,0.78)';
@@ -868,6 +958,6 @@ const Renderer = (() => {
   return {
     COLORS, aabb, drawPaperTexture, drawPlayChrome, drawHud, drawLaneHeaders,
     drawLanes, drawPlayer, drawNpc, drawAmnesty, drawObstacle, drawSpecial, drawPickup, drawCoin, drawMerit,
-    drawRankPanel, drawToast, drawAmbientBanner, drawOverlay, LANE_NAMES
+    drawRankPanel, drawRankPanelBottom, drawToast, drawAmbientBanner, drawOverlay, LANE_NAMES
   };
 })();

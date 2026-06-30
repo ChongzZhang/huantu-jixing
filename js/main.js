@@ -8,6 +8,7 @@ const AGE_DEATH_START = 51;
 const AGE_DEATH_RAMP = 66;
 const PANEL_W = 208;
 const HUD_TOP = 118;
+const HUD_TOP_MOBILE = 102;
 
 const Game = (() => {
   let canvas, ctx, input;
@@ -24,8 +25,37 @@ const Game = (() => {
   let paused = false;
   let sessionNpcKnockouts = 0;
 
+  function isMobileLayout() {
+    if (cssW > 0 && cssW < 640) return true;
+    return typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+  }
+
+  function layoutPanelW() {
+    if (isMobileLayout()) return 0;
+    return PANEL_W;
+  }
+
+  function layoutHudTop() {
+    return isMobileLayout() ? HUD_TOP_MOBILE : HUD_TOP;
+  }
+
   function applyLayout() {
-    layout = Lanes.compute(cssW, cssH, PANEL_W, HUD_TOP);
+    layout = Lanes.compute(cssW, cssH, layoutPanelW(), layoutHudTop(), {
+      mobile: isMobileLayout()
+    });
+    layout.isMobile = isMobileLayout();
+  }
+
+  function updateControlHints() {
+    const touch = Input?.isTouchDevice?.() ?? false;
+    document.querySelectorAll('.hint-touch').forEach((el) => {
+      el.classList.toggle('hidden', !touch);
+    });
+    document.querySelectorAll('.hint-mouse').forEach((el) => {
+      el.classList.toggle('hidden', touch);
+    });
+    const pauseBtn = document.getElementById('btn-pause');
+    if (pauseBtn) pauseBtn.title = touch ? '暂停' : '暂停 (P)';
   }
 
   let ready = false;
@@ -129,6 +159,10 @@ const Game = (() => {
     ctx = canvas.getContext('2d');
     resize();
     window.addEventListener('resize', resize);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', resize);
+      window.visualViewport.addEventListener('scroll', resize);
+    }
 
     try {
       const data = await DataLoad.loadAll();
@@ -148,6 +182,7 @@ const Game = (() => {
       layout.trackLeft + layout.trackWidth / 2,
       layout.playTop + layout.playHeight - 56
     );
+    updateControlHints();
 
     canvas.addEventListener('click', onCanvasClick);
 
@@ -163,9 +198,11 @@ const Game = (() => {
 
   function resize() {
     const wrap = document.getElementById('wrap');
+    const vp = window.visualViewport;
     dpr = Math.min(window.devicePixelRatio || 1, 2);
-    cssW = wrap.clientWidth;
-    cssH = Math.max(640, window.innerHeight - 16);
+    cssW = Math.round(vp?.width || wrap.clientWidth || window.innerWidth);
+    cssH = Math.round(vp?.height || window.innerHeight);
+    if (cssH < 400) cssH = Math.max(400, window.innerHeight);
     canvas.width = Math.round(cssW * dpr);
     canvas.height = Math.round(cssH * dpr);
     canvas.style.width = cssW + 'px';
@@ -173,6 +210,7 @@ const Game = (() => {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = true;
     applyLayout();
+    updateControlHints();
   }
 
   function showScreen(id) {
@@ -588,7 +626,7 @@ const Game = (() => {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    if (x > layout.panelX) {
+    if (layout.mode === 'bottom' ? y > layout.panelY : x > layout.panelX) {
       const codex = EventLog.getCodex();
       if (codex.length) EventLog.showDetail(codex[codex.length - 1]);
     }
@@ -612,7 +650,9 @@ const Game = (() => {
     tickAmnesty(dt);
     Spawner.tick(dt, progress, layout, speed, Ranks.getState());
     Ranks.tick(dt);
-    EventLog.tick(dt, progress, layout.panelX, layout.panelW);
+    const bannerX = layout.mode === 'bottom' ? 0 : layout.panelX;
+    const bannerW = layout.mode === 'bottom' ? layout.playAreaW : layout.panelW;
+    EventLog.tick(dt, progress, bannerX, bannerW);
 
     Spawner.getObstacles().forEach(handleObstacle);
     Spawner.getSpecials().forEach(handleSpecial);
@@ -660,7 +700,7 @@ const Game = (() => {
       safety: player.safety,
       integrity: player.integrity,
       amnestyLeft: player.amnestyLeft || 0
-    });
+    }, layout.isMobile);
     Renderer.drawLaneHeaders(ctx, layout);
     Renderer.drawLanes(ctx, layout, layout.playHeight);
 
@@ -674,12 +714,18 @@ const Game = (() => {
     Spawner.getPickups().forEach((p) => Renderer.drawPickup(ctx, p));
     Renderer.drawPlayer(ctx, player);
 
-    Renderer.drawRankPanel(ctx, layout.panelX, layout.panelW, h, Ranks.getState(), {
-      age: getPlayerAge(),
-      ageProgress: getAgeProgress(),
-      tenureLeft: formatTenureLeft(),
-      startAge: START_AGE
-    });
+    if (layout.mode === 'bottom') {
+      Renderer.drawRankPanelBottom(ctx, layout, Ranks.getState(), {
+        tenureLeft: formatTenureLeft()
+      });
+    } else {
+      Renderer.drawRankPanel(ctx, layout.panelX, layout.panelW, h, Ranks.getState(), {
+        age: getPlayerAge(),
+        ageProgress: getAgeProgress(),
+        tenureLeft: formatTenureLeft(),
+        startAge: START_AGE
+      });
+    }
     Renderer.drawAmbientBanner(ctx, layout, EventLog.getBanner());
     Renderer.drawToast(ctx, layout, h, EventLog.getToast(), EventLog.getToastAlpha());
 

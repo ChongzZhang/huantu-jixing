@@ -3,7 +3,7 @@ const Tutorial = (() => {
   const STEPS = [
     {
       title: '移动',
-      line: '鼠标跟随，绯袍官员即你。',
+      line: '手指或鼠标跟随，绯袍即你。',
       scene: 'move'
     },
     {

@@ -4,20 +4,20 @@ const Difficulty = (() => {
     easy: {
       id: 'easy',
       label: '平易',
-      npcSpeedMult: 0.52,
-      rivalSpeedMult: 0.78
+      npcSpeedMult: 0.44,
+      rivalSpeedMult: 0.76
     },
     normal: {
       id: 'normal',
       label: '中庸',
-      npcSpeedMult: 0.68,
-      rivalSpeedMult: 0.92
+      npcSpeedMult: 0.54,
+      rivalSpeedMult: 0.9
     },
     hard: {
       id: 'hard',
       label: '严苛',
-      npcSpeedMult: 0.88,
-      rivalSpeedMult: 1.08
+      npcSpeedMult: 0.76,
+      rivalSpeedMult: 1.04
     }
   };
 
@@ -41,9 +41,28 @@ const Difficulty = (() => {
     return base * get().rivalSpeedMult;
   }
 
-  function npcSpeed() {
-    return (NPC_BASE + Math.random() * NPC_RANGE) * get().npcSpeedMult;
+  function npcSpeedFromRoll(roll = Math.random()) {
+    const r = Math.max(0, Math.min(1, roll));
+    return (NPC_BASE + r * NPC_RANGE) * get().npcSpeedMult;
   }
 
-  return { set, get, LEVELS, rivalSpeed, npcSpeed };
+  function npcSpeed() {
+    return npcSpeedFromRoll(Math.random());
+  }
+
+  function applyNpcSpeed(npc) {
+    if (!npc) return;
+    npc.moveSpeed = npcSpeedFromRoll(npc.speedRoll ?? 0.5);
+  }
+
+  function applyRivalSpeed(rival) {
+    if (!rival) return;
+    rival.moveSpeed = rivalSpeed(rival.slot);
+  }
+
+  return {
+    set, get, LEVELS,
+    rivalSpeed, npcSpeed, npcSpeedFromRoll,
+    applyNpcSpeed, applyRivalSpeed
+  };
 })();

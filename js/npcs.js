@@ -7,12 +7,14 @@ const Npcs = (() => {
 
   const MAX_ACTIVE = 6;
   const SPAWN_INTERVAL = 9;
+  const SPAWN_BATCH = 2;
+  const SEED_COUNT = 3;
   const FALL_MULT_BASE = 0.5;
   const FALL_MULT_RANGE = 0.16;
   const AVOID_RADIUS = 140;
   const PANIC_RADIUS = 72;
-  const AVOID_PUSH = 260;
-  const PANIC_PUSH_MULT = 2.2;
+  const AVOID_PUSH = 150;
+  const PANIC_PUSH_MULT = 2;
 
   let list = [];
   let spawnAcc = 0;
@@ -53,7 +55,8 @@ const Npcs = (() => {
       chaseKey: null,
       chaseHold: 0,
       fallMult: FALL_MULT_BASE + Math.random() * FALL_MULT_RANGE,
-      moveSpeed: Difficulty.npcSpeed(),
+      speedRoll: Math.random(),
+      moveSpeed: 0,
       grabCd: 0,
       pulse: Math.random() * Math.PI * 2,
       robe: ROBES[Math.floor(Math.random() * ROBES.length)],
@@ -76,10 +79,9 @@ const Npcs = (() => {
 
   function seed(layout) {
     list = [];
-    const lanes = [0, 1, 2, 0, 1];
-    lanes.forEach((ln, i) => {
-      list.push(create(layout, ln, Lanes.randomSpawnY() - 30 - i * 70));
-    });
+    for (let i = 0; i < SEED_COUNT; i++) {
+      list.push(create(layout, i % 3, Lanes.randomSpawnY() - 30 - i * 70));
+    }
   }
 
   function hitbox(npc) {
@@ -116,35 +118,13 @@ const Npcs = (() => {
     return ref.color === 'blue';
   }
 
-  function nearestBadDist(npc, badPickups) {
-    let min = Infinity;
-    badPickups.forEach((p) => {
-      const d = Math.hypot(npc.x - p.x, npc.y - p.y);
-      if (d < min) min = d;
-    });
-    return min;
-  }
-
   function applyAvoidance(npc, badPickups, dt) {
-    const panic = nearestBadDist(npc, badPickups) < PANIC_RADIUS;
-    let ax = 0;
-    let ay = 0;
-    badPickups.forEach((p) => {
-      const dx = npc.x - p.x;
-      const dy = npc.y - p.y;
-      const dist = Math.hypot(dx, dy);
-      if (dist >= AVOID_RADIUS || dist < 1) return;
-      const t = (AVOID_RADIUS - dist) / AVOID_RADIUS;
-      const weight = t * t * (dist < PANIC_RADIUS ? 1.3 : 1);
-      ax += (dx / dist) * weight;
-      ay += (dy / dist) * weight;
-    });
-    const mag = Math.hypot(ax, ay);
-    if (mag > 0.01) {
-      const push = AVOID_PUSH * (panic ? PANIC_PUSH_MULT : 1.1) * dt;
-      npc.x += (ax / mag) * push;
-      npc.y += (ay / mag) * push;
-    }
+    AiMove.applyAvoidance(npc, badPickups, {
+      radius: AVOID_RADIUS,
+      panicRadius: PANIC_RADIUS,
+      pushBase: AVOID_PUSH,
+      panicMult: PANIC_PUSH_MULT
+    }, dt);
   }
 
   function clampPos(npc, layout) {
@@ -161,7 +141,7 @@ const Npcs = (() => {
   }
 
   function chaseToward(npc, tx, ty, dt) {
-    AiMove.smoothChase(npc, tx, ty, dt);
+    AiMove.steerToward(npc, tx, ty, dt);
   }
 
   function findTarget(npc, items, peers) {
@@ -255,6 +235,7 @@ const Npcs = (() => {
     npc.pulse += dt * 4;
     if (npc.grabCd > 0) npc.grabCd -= dt;
     AiMove.tickHold(npc, dt);
+    Difficulty.applyNpcSpeed(npc);
 
     const bottom = layout.playTop + layout.playHeight;
     if (npc.y > bottom - npc.h * 0.4) {
@@ -262,15 +243,17 @@ const Npcs = (() => {
       npc.fade = Math.max(0, (npc.fade ?? 1) - dt * 0.55);
     }
 
-    AiMove.applySeparation(npc, peers, dt);
-    applyAvoidance(npc, badPickups, dt);
-
     const target = findTarget(npc, items, peers);
     if (target) {
       chaseToward(npc, target.x, target.y, dt);
     } else {
-      AiMove.drift(npc, speed * npc.fallMult * progressBoost * 0.35, dt);
+      AiMove.steerDrift(npc, speed * npc.fallMult * progressBoost * 0.28, dt);
     }
+
+    AiMove.applySeparation(npc, peers, dt);
+    applyAvoidance(npc, badPickups, dt);
+    AiMove.integrate(npc, dt);
+    AiMove.clampSpeed(npc, npc.moveSpeed * 1.12);
 
     clampPos(npc, layout);
   }
@@ -311,7 +294,9 @@ const Npcs = (() => {
     spawnAcc += dt;
     while (list.length < MAX_ACTIVE && spawnAcc >= SPAWN_INTERVAL) {
       spawnAcc -= SPAWN_INTERVAL;
-      list.push(create(layout));
+      for (let n = 0; n < SPAWN_BATCH && list.length < MAX_ACTIVE; n++) {
+        list.push(create(layout));
+      }
     }
 
     const items = collectibles(
