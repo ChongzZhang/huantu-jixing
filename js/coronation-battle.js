@@ -225,11 +225,12 @@ const CoronationBattle = (() => {
     const mLeft = MINION_TOTAL - minionSpawned;
     if (oLeft <= 0) return 'grunt';
     if (mLeft <= 0) return 'official';
-    const oRatio = officialSpawned / OFFICIAL_TOTAL;
-    const mRatio = minionSpawned / MINION_TOTAL;
-    if (mRatio < oRatio - 0.04) return 'grunt';
-    if (oRatio < mRatio - 0.04) return 'official';
-    return Math.random() < MINION_TOTAL / TOTAL ? 'grunt' : 'official';
+    const progress = spawnCountTotal() / TOTAL;
+    const wantMinion = Math.floor(MINION_TOTAL * progress) + 3;
+    const wantOfficial = Math.floor(OFFICIAL_TOTAL * progress);
+    if (minionSpawned < wantMinion) return 'grunt';
+    if (officialSpawned < wantOfficial) return 'official';
+    return minionSpawned / MINION_TOTAL < officialSpawned / OFFICIAL_TOTAL ? 'grunt' : 'official';
   }
 
   function spawnPos(layout, size, yBias) {
@@ -242,7 +243,7 @@ const CoronationBattle = (() => {
   }
 
   function makeMinion(layout, xHint) {
-    const size = Lanes.fitSize(layout, 18, 22);
+    const size = Lanes.fitSize(layout, 22, 28);
     const margin = size.w / 2 + 6;
     const span = Math.max(20, layout.trackWidth - margin * 2);
     const x = xHint != null
@@ -251,12 +252,13 @@ const CoronationBattle = (() => {
     return {
       id: 'minion_' + Date.now() + Math.random(),
       rankTitle: '',
-      name: '',
+      name: '兵',
+      label: '兵',
       x,
       y: layout.playTop + 12,
       w: size.w,
       h: size.h,
-      robe: '#4a1818',
+      robe: '#8c3535',
       pulse: Math.random() * Math.PI * 2,
       state: 'active',
       side: 'enemy',
@@ -300,17 +302,18 @@ const CoronationBattle = (() => {
   }
 
   function spawnWaveGrunt(layout) {
-    const size = Lanes.fitSize(layout, 18, 22);
-    const pos = spawnPos(layout, size, 10 + Math.random() * 10);
+    const size = Lanes.fitSize(layout, 22, 28);
+    const pos = spawnPos(layout, size, 8 + Math.random() * 14);
     enemies.push({
       id: 'grunt_' + minionSpawned,
       rankTitle: '',
-      name: '',
+      name: '兵',
+      label: '兵',
       x: pos.x,
       y: pos.y,
       w: size.w,
       h: size.h,
-      robe: '#4a1818',
+      robe: '#8c3535',
       pulse: Math.random() * Math.PI * 2,
       state: 'active',
       side: 'enemy',

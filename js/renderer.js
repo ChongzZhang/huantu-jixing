@@ -551,7 +551,7 @@ const Renderer = (() => {
       accent: isBoss ? '#ffd700' : (isRival ? COLORS.gold : (isAlly && npc.named ? '#5ab0d8' : null)),
       mini: isBoss ? false : (isEnemy ? !!npc.isMinion : (npc.reinforce && !npc.named)),
       rankTitle: knock ? '' : (showPlate ? (npc.rankTitle || '') : ''),
-      name: knock ? '' : ((npc.reinforce && !npc.named) ? '' : (npc.name || '')),
+      name: knock ? '' : ((npc.reinforce && !npc.named) ? '' : (npc.isMinion ? '' : (npc.name || ''))),
       pulse: npc.pulse || 0,
       alpha
     });
@@ -573,11 +573,26 @@ const Renderer = (() => {
     }
 
     if (isEnemy) {
-      ctx.strokeStyle = 'rgba(180,40,40,0.85)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(0, 0, npc.w * 0.62, 0, Math.PI * 2);
-      ctx.stroke();
+      if (npc.isMinion) {
+        ctx.strokeStyle = 'rgba(255,160,80,0.9)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.arc(0, 0, npc.w * 0.66, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#ffe0b0';
+        ctx.font = `bold ${Math.max(10, npc.w * 0.42)}px KaiTi, serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('兵', 0, npc.h * 0.06);
+      } else {
+        ctx.strokeStyle = 'rgba(180,40,40,0.85)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, npc.w * 0.62, 0, Math.PI * 2);
+        ctx.stroke();
+      }
     }
     if (isBoss) {
       ctx.strokeStyle = 'rgba(255,215,80,0.95)';
@@ -738,7 +753,7 @@ const Renderer = (() => {
       const mTotal = meta.minionTotal || 160;
       const spawnTxt = meta.spawnDone
         ? ''
-        : ` · 官${oSpawn}/${oTotal}·兵${mSpawn}/${mTotal}`;
+        : ` · 官${oSpawn}/${oTotal} 兵${mSpawn}/${mTotal} 计${oSpawn + mSpawn}/360`;
       line = `八轮对战 · 第${meta.wave}/${meta.waveTotal || 8}波${spawnTxt} · 场${enemies} · 命${max - hits}/${max} · 援${allies}/${allyCap} · 自动`;
     }
     ctx.save();
