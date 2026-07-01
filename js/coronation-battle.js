@@ -4,6 +4,9 @@ const CoronationBattle = (() => {
   const MINION_TOTAL = 160;
   const TOTAL = OFFICIAL_TOTAL + MINION_TOTAL;
   const ALLY_TARGET = 130;
+  const ALLY_PACE = 0.92;
+  const ALLY_WAVE_SIZES = [16, 16, 16, 16, 16, 16, 17, 17];
+  const ALLY_GRUNT_MAX_HITS = 1;
   const BASE_SPAWN_INTERVAL = 0.72;
   const BASE_SPAWN_BATCH = 3;
   const WAVE_OFFICIAL_SIZES = [25, 25, 25, 25, 25, 25, 25, 25];
@@ -25,7 +28,7 @@ const CoronationBattle = (() => {
   const BALL_R = 12;
   const PLAYER_FIRE_CD = 0.22;
   const PLAYER_BULLET_SPEED = 500;
-  const ALLY_BULLET_SPEED = 420;
+  const ALLY_BULLET_SPEED = 360;
   const ENEMY_BULLET_SPEED = 200;
   const BOSS_BULLET_SPEED = 225;
   const PLAYER_MOVE_SPEED = 340;
@@ -96,6 +99,8 @@ const CoronationBattle = (() => {
   let spawnCount = 0;
   let officialSpawned = 0;
   let minionSpawned = 0;
+  let allySpawned = 0;
+  let allySpawnDebt = 0;
   let spawnAcc = 0;
   let waveIdx = 0;
   let wavePause = 0;
@@ -113,6 +118,8 @@ const CoronationBattle = (() => {
     spawnCount = 0;
     officialSpawned = 0;
     minionSpawned = 0;
+    allySpawned = 0;
+    allySpawnDebt = 0;
     spawnAcc = 0;
     waveIdx = 0;
     wavePause = 0;
@@ -142,18 +149,25 @@ const CoronationBattle = (() => {
     return { rankTitle, name: randomAllyName() };
   }
 
-  function makeReinforcementAlly(layout, index, cols, col, row, colStep, rowStep, bandTop, left, compactSize) {
+  function spawnAllyReinforcement(layout) {
+    if (allySpawned >= ALLY_TARGET) return;
+    const index = allySpawned;
     const official = Math.random() < ALLY_OFFICIAL_RATE;
     const id = official ? randomAllyIdentity() : null;
+    const compactSize = Lanes.fitSize(layout, 15, 19);
     const size = official ? Lanes.fitSize(layout, 20, 26) : compactSize;
-    return {
+    const margin = size.w / 2 + 4;
+    const span = Math.max(20, layout.trackWidth - margin * 2);
+    const x = layout.trackLeft + margin + Math.random() * span;
+    const y = layout.playTop + layout.playHeight - 14 - Math.random() * 28;
+    allies.push({
       id: 'reinforce_' + index,
       name: official ? id.name : '',
       rankTitle: official ? id.rankTitle : '',
       named: official,
       reinforce: !official,
-      x: left + colStep * (col + 0.5),
-      y: bandTop + rowStep * (row + 0.5),
+      x,
+      y,
       w: size.w,
       h: size.h,
       robe: ALLY_ROBES[index % ALLY_ROBES.length],
@@ -161,32 +175,32 @@ const CoronationBattle = (() => {
       state: 'active',
       side: 'ally',
       hits: 0,
-      maxHits: UNIT_MAX_HITS,
-      fireCd: 0.2 + (index % 11) * 0.08,
+      maxHits: official ? UNIT_MAX_HITS : ALLY_GRUNT_MAX_HITS,
+      fireCd: 0.8 + Math.random() * 1.0,
       vx: 0,
-      vy: ALLY_DRIFT * 0.35,
-      battle: true
-    };
+      vy: -ALLY_DRIFT * 0.5,
+      battle: true,
+      entering: true
+    });
+    allySpawned += 1;
   }
 
-  function fillReinforcements(layout) {
-    const need = ALLY_TARGET - allies.length;
-    if (need <= 0) return;
-    const cols = 13;
-    const rows = Math.ceil(need / cols);
-    const size = Lanes.fitSize(layout, 15, 19);
-    const margin = size.w / 2 + 2;
-    const left = layout.trackLeft + margin;
-    const span = Math.max(20, layout.trackWidth - margin * 2);
-    const bandTop = layout.playTop + layout.playHeight * 0.56;
-    const bandH = layout.playHeight * 0.34;
-    const colStep = span / cols;
-    const rowStep = bandH / rows;
-    for (let i = 0; i < need; i++) {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      allies.push(makeReinforcementAlly(layout, i, cols, col, row, colStep, rowStep, bandTop, left, size));
-    }
+  function allyQuotaForWave(wave) {
+    let sum = 0;
+    for (let i = 0; i <= wave && i < ALLY_WAVE_SIZES.length; i++) sum += ALLY_WAVE_SIZES[i];
+    return sum;
+  }
+
+  function syncAllyReinforcements(layout) {
+    const progress = spawnCountTotal() / TOTAL;
+    const byProgress = Math.floor(progress * ALLY_TARGET);
+    const byWave = Math.floor(allyQuotaForWave(waveIdx) * ALLY_PACE);
+    const want = Math.min(ALLY_TARGET, Math.max(byProgress, byWave));
+    while (allySpawned < want) spawnAllyReinforcement(layout);
+  }
+
+  function accrueAllyDebt(enemyCount) {
+    allySpawnDebt += enemyCount * (ALLY_TARGET / TOTAL);
   }
 
   function adoptUnit(src, side) {
@@ -208,8 +222,8 @@ const CoronationBattle = (() => {
       state: 'active',
       side,
       hits: 0,
-      maxHits: UNIT_MAX_HITS,
-      fireCd: 0.6 + Math.random() * 1.2,
+      maxHits: named && !!allyId ? UNIT_MAX_HITS : ALLY_GRUNT_MAX_HITS,
+      fireCd: 1.0 + Math.random() * 1.4,
       vx: 0,
       vy: ALLY_DRIFT,
       battle: true
@@ -374,15 +388,15 @@ const CoronationBattle = (() => {
       const u = adoptUnit(r, 'ally');
       if (u) allies.push(u);
     });
-    fillReinforcements(layout);
-    spawnAcc = 0.4;
-    EventLog.showQuick('八轮对战', `援军${allies.length}人集结！官${OFFICIAL_TOTAL}兵${MINION_TOTAL}逐步来犯！`, 'promote');
+    spawnAcc = 0.55;
+    EventLog.showQuick('八轮对战', '敌我分批入场！敌360援130，我方略逊一筹', 'promote');
   }
 
   function skipToBossPhase(layout) {
     phase = 'boss';
     officialSpawned = OFFICIAL_TOTAL;
     minionSpawned = MINION_TOTAL;
+    allySpawned = ALLY_TARGET;
     spawnCount = TOTAL;
     waveIdx = WAVE_SIZES.length - 1;
     enemies = [];
@@ -467,23 +481,32 @@ const CoronationBattle = (() => {
     while (spawnAcc >= interval && spawnCountTotal() < TOTAL) {
       spawnAcc -= interval;
       const batch = Math.min(spawnBatchForWave(), TOTAL - spawnCountTotal());
+      let spawnedThisTick = 0;
       for (let i = 0; i < batch; i++) {
         const kind = pickNextSpawnKind();
         if (kind === 'official') spawnWaveOfficial(layout);
         else spawnWaveGrunt(layout);
+        spawnedThisTick += 1;
+        accrueAllyDebt(1);
+        while (allySpawnDebt >= 1 && allySpawned < ALLY_TARGET) {
+          allySpawnDebt -= 1;
+          spawnAllyReinforcement(layout);
+        }
         if (WAVE_BREAKS.includes(spawnCountTotal())) {
           waveIdx += 1;
           wavePause = WAVE_PAUSE;
+          syncAllyReinforcements(layout);
           if (waveIdx < WAVE_SIZES.length) {
             EventLog.showQuick(
-              '敌兵波次',
-              `第 ${waveIdx + 1} 波将至 · 官兵混编来犯……`,
+              '对阵波次',
+              `第 ${waveIdx + 1} 波 · 敌援同步增兵……`,
               'demote'
             );
           }
           break;
         }
       }
+      if (spawnedThisTick > 0) syncAllyReinforcements(layout);
       if (wavePause > 0) break;
     }
   }
@@ -605,6 +628,9 @@ const CoronationBattle = (() => {
 
     if (phase === 'waves') {
       trySpawnWaves(dt, layout);
+      if (spawnCountTotal() >= TOTAL) {
+        while (allySpawned < ALLY_TARGET) spawnAllyReinforcement(layout);
+      }
       if (spawnCountTotal() >= TOTAL && enemies.length === 0) {
         beginBossPhase(layout);
       }
@@ -633,19 +659,24 @@ const CoronationBattle = (() => {
       a.pulse = (a.pulse || 0) + dt * 4;
       const target = nearestEnemy(a);
       if (target) {
-        const steer = Math.sign(target.x - a.x) * (a.named ? 54 : 42);
+        const steer = Math.sign(target.x - a.x) * (a.named ? 46 : 34);
         a.vx = steer;
         const toY = target.y - a.y;
-        a.vy = ALLY_DRIFT * 0.2 + Math.sign(toY) * Math.min(Math.abs(toY) * 0.24, 68);
+        const chase = a.named ? 0.18 : 0.14;
+        a.vy = -ALLY_DRIFT * 0.15 + Math.sign(toY) * Math.min(Math.abs(toY) * chase, 52);
+      } else if (a.entering) {
+        a.vy = -ALLY_DRIFT * 0.55;
+        a.vx *= 0.9;
       } else {
-        a.vy = ALLY_DRIFT * 0.35;
+        a.vy = -ALLY_DRIFT * 0.25;
       }
+      if (a.entering && target && a.y <= target.y + 40) a.entering = false;
       a.x += a.vx * dt;
       a.y += a.vy * dt;
       clampUnit(a, layout);
       a.fireCd -= dt;
       if (a.fireCd > 0) return;
-      a.fireCd = 1.6 + Math.random() * 1.2;
+      a.fireCd = 2.1 + Math.random() * 1.4;
       const foe = nearestEnemy(a);
       if (!foe) return;
       spawnBall(a.x, a.y - 4, foe.x, foe.y, ALLY_BULLET_SPEED, 'ally');
@@ -753,6 +784,7 @@ const CoronationBattle = (() => {
       hits: playerHits,
       maxHits: PLAYER_MAX_HITS,
       alliesLeft: allies.length,
+      allySpawned,
       allyTarget: ALLY_TARGET,
       fireReady: playerFireCd <= 0,
       bossHits: boss ? boss.hits : 0,
