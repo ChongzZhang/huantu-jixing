@@ -3,9 +3,9 @@ const CoronationBattle = (() => {
   const OFFICIAL_TOTAL = 200;
   const MINION_TOTAL = 160;
   const TOTAL = OFFICIAL_TOTAL + MINION_TOTAL;
-  const ALLY_TARGET = 118;
+  const ALLY_TARGET = 148;
   const ALLY_PACE = 0.84;
-  const ALLY_WAVE_SIZES = [15, 15, 15, 14, 14, 15, 15, 15];
+  const ALLY_WAVE_SIZES = [19, 19, 19, 18, 18, 19, 18, 18];
   const ALLY_GRUNT_MAX_HITS = 1;
   const ALLY_OFFICIAL_MAX_HITS = 2;
   const BASE_SPAWN_INTERVAL = 0.66;
@@ -228,7 +228,7 @@ const CoronationBattle = (() => {
       side,
       hits: 0,
       maxHits: named && !!allyId ? ALLY_OFFICIAL_MAX_HITS : ALLY_GRUNT_MAX_HITS,
-      fireCd: 1.2 + Math.random() * 1.2,
+      fireCd: 0.9 + Math.random() * 1.0,
       vx: 0,
       vy: ALLY_DRIFT,
       battle: true
@@ -704,7 +704,7 @@ const CoronationBattle = (() => {
       clampUnit(a, layout);
       a.fireCd -= dt;
       if (a.fireCd > 0) return;
-      a.fireCd = 2.3 + Math.random() * 1.4;
+      a.fireCd = 1.9 + Math.random() * 1.1;
       const foe = nearestEnemy(a);
       if (!foe) return;
       spawnBall(a.x, a.y - 4, foe.x, foe.y, ALLY_BULLET_SPEED, 'ally');
