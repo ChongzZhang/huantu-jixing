@@ -1,10 +1,10 @@
 /* 宦途疾行 · 黄袍加身终局 — 飞机大战式逼宫战 */
 const CoronationBattle = (() => {
-  const TOTAL = 200;
+  const TOTAL = 360;
   const ALLY_TARGET = 130;
-  const BASE_SPAWN_INTERVAL = 0.78;
-  const BASE_SPAWN_BATCH = 2;
-  const WAVE_SIZES = [25, 25, 25, 25, 25, 25, 25, 25];
+  const BASE_SPAWN_INTERVAL = 0.72;
+  const BASE_SPAWN_BATCH = 3;
+  const WAVE_SIZES = [45, 45, 45, 45, 45, 45, 45, 45];
   /** 八轮对战：波次越高略加速（幅度收敛） */
   const WAVE_SPAWN_MULT = [1, 1.14, 1.26, 1.36, 1.44, 1.50, 1.55, 1.58];
   const WAVE_FIRE_MULT = [1, 1.10, 1.20, 1.28, 1.34, 1.38, 1.42, 1.45];
@@ -41,8 +41,9 @@ const CoronationBattle = (() => {
   const ENEMY_FIRE_MAX = 2.6 / ENEMY_FIRE_RATE;
   const BOSS_FIRE_MIN = 0.48 / ENEMY_FIRE_RATE;
   const BOSS_FIRE_MAX = 0.72 / ENEMY_FIRE_RATE;
-  const BOSS_MINION_INTERVAL = 2.4 / ENEMY_FIRE_RATE;
-  const BOSS_MAX_MINIONS = 12;
+  const BOSS_MINION_INTERVAL = 2.0 / ENEMY_FIRE_RATE;
+  const BOSS_MAX_MINIONS = 22;
+  const ALLY_OFFICIAL_RATE = 0.28;
 
   function rollEnemyFireCd() {
     const w = combatWaveIndex();
@@ -61,7 +62,7 @@ const CoronationBattle = (() => {
   }
 
   function spawnBatchForWave() {
-    return Math.min(5, BASE_SPAWN_BATCH + combatWaveIndex());
+    return Math.min(8, BASE_SPAWN_BATCH + combatWaveIndex());
   }
 
   const HIGH_RANKS = [
@@ -72,6 +73,11 @@ const CoronationBattle = (() => {
   const FOE_SURNAMES = ['韩', '富', '吕', '晏', '欧阳', '范', '包', '曾', '蔡', '庞', '文', '种'];
   const FOE_GIVEN1 = ['彦', '子', '夷', '元', '公', '君', '仲', '文', '正', '德', '师'];
   const FOE_GIVEN2 = ['博', '坚', '简', '殊', '修', '弼', '拯', '巩', '京', '卞', '通'];
+  const ALLY_RANKS = [
+    '知州', '通判', '推官', '知县', '签书', '节度推官',
+    '殿中丞', '监察御史', '员外郎', '郎中', '侍郎', '知府',
+    '转运使', '提点刑狱', '翰林学士', '待制', '龙图阁直学士', '参知政事'
+  ];
   const ALLY_SURNAMES = ['李', '王', '张', '赵', '刘', '陈', '杨', '黄', '周', '吴', '徐', '孙'];
   const ALLY_GIVEN1 = ['仲', '彦', '子', '君', '元', '正', '师', '希', '永', '升', '执', '文'];
   const ALLY_GIVEN2 = ['文', '固', '国', '中', '范', '谟', '修', '厚', '言', '之', '道', '甫'];
@@ -123,11 +129,21 @@ const CoronationBattle = (() => {
     return sn + g1 + g2;
   }
 
-  function makeReinforcementAlly(layout, index, cols, col, row, colStep, rowStep, bandTop, left, size) {
+  function randomAllyIdentity() {
+    const rankTitle = ALLY_RANKS[Math.floor(Math.random() * ALLY_RANKS.length)];
+    return { rankTitle, name: randomAllyName() };
+  }
+
+  function makeReinforcementAlly(layout, index, cols, col, row, colStep, rowStep, bandTop, left, compactSize) {
+    const official = Math.random() < ALLY_OFFICIAL_RATE;
+    const id = official ? randomAllyIdentity() : null;
+    const size = official ? Lanes.fitSize(layout, 20, 26) : compactSize;
     return {
       id: 'reinforce_' + index,
-      name: '',
-      reinforce: true,
+      name: official ? id.name : '',
+      rankTitle: official ? id.rankTitle : '',
+      named: official,
+      reinforce: !official,
       x: left + colStep * (col + 0.5),
       y: bandTop + rowStep * (row + 0.5),
       w: size.w,
@@ -167,9 +183,14 @@ const CoronationBattle = (() => {
 
   function adoptUnit(src, side) {
     if (!src || src.state === 'knockfly' || (src.fade ?? 1) < 0.15) return null;
+    const allyId = side === 'ally' ? randomAllyIdentity() : null;
+    const named = side === 'ally' && Math.random() < 0.5;
     return {
       id: src.id || ('ally_' + Math.random()),
-      name: src.name,
+      name: src.name || (allyId ? allyId.name : ''),
+      rankTitle: named && allyId ? allyId.rankTitle : '',
+      named: named && !!allyId,
+      reinforce: false,
       x: src.x,
       y: src.y,
       w: src.w,
@@ -544,8 +565,12 @@ const CoronationBattle = (() => {
       a.pulse = (a.pulse || 0) + dt * 4;
       const target = nearestEnemy(a);
       if (target) {
-        const steer = Math.sign(target.x - a.x) * 40;
+        const steer = Math.sign(target.x - a.x) * (a.named ? 54 : 42);
         a.vx = steer;
+        const toY = target.y - a.y;
+        a.vy = ALLY_DRIFT * 0.2 + Math.sign(toY) * Math.min(Math.abs(toY) * 0.24, 68);
+      } else {
+        a.vy = ALLY_DRIFT * 0.35;
       }
       a.x += a.vx * dt;
       a.y += a.vy * dt;

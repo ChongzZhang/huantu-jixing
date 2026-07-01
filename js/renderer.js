@@ -500,7 +500,7 @@ const Renderer = (() => {
     const alpha = (knock ? 0.88 : 0.92) * (npc.fade ?? 1);
     if (npc.state === 'respawn') return;
 
-    const showBattleHp = (battleRole || npc.isBoss) && npc.maxHits != null && !isBoss && !npc.reinforce;
+    const showBattleHp = (battleRole || npc.isBoss) && npc.maxHits != null && !isBoss && (!npc.reinforce || npc.named);
     if (showBattleHp) {
       drawBattleHpBar(
         ctx, npc.x, npc.y, npc.w, npc.h,
@@ -538,6 +538,7 @@ const Renderer = (() => {
       }
     }
 
+    const showPlate = (isEnemy || npc.isMinion || isBoss || (isAlly && npc.named));
     drawOfficial(ctx, {
       x: 0,
       y: 0,
@@ -547,13 +548,21 @@ const Renderer = (() => {
       robeMid: c,
       robeBot: darken(c, isBoss ? 12 : 22),
       beltColor: isBoss ? '#ffd700' : (isRival ? COLORS.goldLight : '#c8b888'),
-      accent: isBoss ? '#ffd700' : (isRival ? COLORS.gold : null),
-      mini: isBoss ? false : (npc.reinforce || !isBoss),
-      rankTitle: knock ? '' : ((isEnemy || npc.isMinion || isBoss) ? (npc.rankTitle || '') : ''),
-      name: knock ? '' : (npc.reinforce ? '' : (npc.name || '')),
+      accent: isBoss ? '#ffd700' : (isRival ? COLORS.gold : (isAlly && npc.named ? '#5ab0d8' : null)),
+      mini: isBoss ? false : (npc.reinforce && !npc.named),
+      rankTitle: knock ? '' : (showPlate ? (npc.rankTitle || '') : ''),
+      name: knock ? '' : ((npc.reinforce && !npc.named) ? '' : (npc.name || '')),
       pulse: npc.pulse || 0,
       alpha
     });
+
+    if (isAlly && npc.named && !knock) {
+      ctx.strokeStyle = 'rgba(58,136,184,0.8)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, npc.w * 0.62, 0, Math.PI * 2);
+      ctx.stroke();
+    }
 
     if (isRival && !knock) {
       ctx.strokeStyle = 'rgba(201,168,76,0.7)';
