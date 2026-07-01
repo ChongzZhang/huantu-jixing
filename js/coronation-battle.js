@@ -8,23 +8,32 @@ const CoronationBattle = (() => {
   const PLAYER_FIRE_CD = 0.3;
   const PLAYER_BULLET_SPEED = 500;
   const ALLY_BULLET_SPEED = 420;
-  const ENEMY_BULLET_SPEED = 195;
+  const ENEMY_BULLET_SPEED = 200;
+  const BOSS_BULLET_SPEED = 225;
   const PLAYER_MOVE_SPEED = 240;
-  const ENEMY_DRIFT = 42;
+  const ENEMY_DRIFT = 78;
+  const MINION_DRIFT = 92;
   const ALLY_DRIFT = 28;
   const PLAYER_MAX_HITS = 3;
   const UNIT_MAX_HITS = 2;
+  const BOSS_MAX_HITS = 16;
   const LIGHT_DROP_CHANCE = 0.3;
   const LIGHT_INVINCIBLE = 10;
   const HIT_IFRAME = 0.55;
+  const BOSS_FIRE_MIN = 0.36;
+  const BOSS_FIRE_MAX = 0.58;
+  const BOSS_MINION_INTERVAL = 1.85;
+  const BOSS_MAX_MINIONS = 14;
+  const BOSS_INTRO_SEC = 2.2;
+
+  const ENEMY_FIRE_MIN = 1.4;
+  const ENEMY_FIRE_MAX = 2.6;
 
   const SURNAMES = ['辽', '西夏', '吐蕃', '大理', '回鹘', '契丹', '女真', '蒙古', '金', '夏'];
   const GIVEN = ['先锋', '偏将', '都尉', '校尉', '弓手', '铁骑', '伏兵', '斥候', '牙将', '统制'];
 
-  const ENEMY_FIRE_MIN = 1.6;
-  const ENEMY_FIRE_MAX = 3.0;
-
   let active = false;
+  let phase = 'waves';
   let allies = [];
   let enemies = [];
   let bullets = [];
@@ -36,9 +45,11 @@ const CoronationBattle = (() => {
   let playerHits = 0;
   let playerFireCd = 0;
   let hitFlash = 0;
+  let bossIntroLeft = 0;
 
   function reset() {
     active = false;
+    phase = 'waves';
     allies = [];
     enemies = [];
     bullets = [];
@@ -50,6 +61,7 @@ const CoronationBattle = (() => {
     playerHits = 0;
     playerFireCd = 0;
     hitFlash = 0;
+    bossIntroLeft = 0;
   }
 
   function randomEnemyName() {
@@ -80,7 +92,35 @@ const CoronationBattle = (() => {
     };
   }
 
-  function spawnEnemy(layout) {
+  function makeMinion(layout, xHint) {
+    const size = Lanes.fitSize(layout, 24, 30);
+    const margin = size.w / 2 + 6;
+    const span = Math.max(20, layout.trackWidth - margin * 2);
+    const x = xHint != null
+      ? Math.max(layout.trackLeft + margin, Math.min(layout.trackLeft + layout.trackWidth - margin, xHint + (Math.random() - 0.5) * 50))
+      : layout.trackLeft + margin + Math.random() * span;
+    return {
+      id: 'minion_' + Date.now() + Math.random(),
+      name: randomEnemyName(),
+      x,
+      y: layout.playTop + 12,
+      w: size.w,
+      h: size.h,
+      robe: '#5a2020',
+      pulse: Math.random() * Math.PI * 2,
+      state: 'active',
+      side: 'enemy',
+      isMinion: true,
+      hits: 0,
+      maxHits: UNIT_MAX_HITS,
+      fireCd: 0.5 + Math.random() * 1,
+      vx: (Math.random() - 0.5) * 40,
+      vy: MINION_DRIFT,
+      battle: true
+    };
+  }
+
+  function spawnWaveEnemy(layout) {
     const size = Lanes.fitSize(layout, 26, 32);
     const margin = size.w / 2 + 6;
     const span = Math.max(20, layout.trackWidth - margin * 2);
@@ -97,12 +137,45 @@ const CoronationBattle = (() => {
       side: 'enemy',
       hits: 0,
       maxHits: UNIT_MAX_HITS,
-      fireCd: 0.8 + Math.random() * 1.4,
-      vx: (Math.random() - 0.5) * 30,
+      fireCd: 0.6 + Math.random() * 1.2,
+      vx: (Math.random() - 0.5) * 36,
       vy: ENEMY_DRIFT,
       battle: true
     });
     spawnCount += 1;
+  }
+
+  function spawnBoss(layout) {
+    const size = Lanes.fitSize(layout, 46, 54);
+    const cx = layout.trackLeft + layout.trackWidth / 2;
+    enemies.push({
+      id: 'emperor_boss',
+      name: '伪帝',
+      isBoss: true,
+      x: cx,
+      y: layout.playTop + 52,
+      w: size.w,
+      h: size.h,
+      robe: '#5a0a0a',
+      pulse: 0,
+      state: 'active',
+      side: 'enemy',
+      hits: 0,
+      maxHits: BOSS_MAX_HITS,
+      fireCd: 0.8,
+      minionCd: 0.6,
+      swayT: 0,
+      battle: true
+    });
+    EventLog.showQuick('殿陛决战', '伪帝御前！击溃方可登基！', 'demote');
+  }
+
+  function countMinions() {
+    return enemies.filter((e) => e.isMinion).length;
+  }
+
+  function getBoss() {
+    return enemies.find((e) => e.isBoss) || null;
   }
 
   function start(layout, npcList, rivalList) {
@@ -117,7 +190,7 @@ const CoronationBattle = (() => {
       if (u) allies.push(u);
     });
     spawnAcc = 0.4;
-    EventLog.showQuick('黄袍加身', '同僚归心！击退三波敌兵即登基！', 'promote');
+    EventLog.showQuick('黄袍加身', '同僚归心！三波敌尽，伪帝现身！', 'promote');
   }
 
   function isActive() {
@@ -149,7 +222,7 @@ const CoronationBattle = (() => {
   }
 
   function unitBox(u) {
-    const pad = 2;
+    const pad = u.isBoss ? 4 : 2;
     return {
       x: u.x - u.w / 2 + pad,
       y: u.y - u.h / 2 + pad,
@@ -172,6 +245,8 @@ const CoronationBattle = (() => {
   }
 
   function nearestEnemy(from) {
+    const boss = getBoss();
+    if (boss) return boss;
     let best = null;
     let bestD = Infinity;
     enemies.forEach((e) => {
@@ -184,21 +259,8 @@ const CoronationBattle = (() => {
     return best;
   }
 
-  function nearestAlly(from) {
-    let best = null;
-    let bestD = Infinity;
-    allies.forEach((a) => {
-      const d = Math.hypot(a.x - from.x, a.y - from.y);
-      if (d < bestD) {
-        bestD = d;
-        best = a;
-      }
-    });
-    return best;
-  }
-
-  function trySpawn(dt, layout) {
-    if (spawnCount >= TOTAL) return;
+  function trySpawnWaves(dt, layout) {
+    if (phase !== 'waves' || spawnCount >= TOTAL) return;
     if (wavePause > 0) {
       wavePause -= dt;
       return;
@@ -206,7 +268,7 @@ const CoronationBattle = (() => {
     spawnAcc += dt;
     while (spawnAcc >= SPAWN_INTERVAL && spawnCount < TOTAL) {
       spawnAcc -= SPAWN_INTERVAL;
-      spawnEnemy(layout);
+      spawnWaveEnemy(layout);
       if (spawnCount === WAVE_SIZES[0] || spawnCount === WAVE_SIZES[0] + WAVE_SIZES[1]) {
         waveIdx += 1;
         wavePause = WAVE_PAUSE;
@@ -218,20 +280,26 @@ const CoronationBattle = (() => {
     }
   }
 
+  function beginBossPhase() {
+    phase = 'boss_intro';
+    bossIntroLeft = BOSS_INTRO_SEC;
+    bullets = bullets.filter((b) => b.side !== 'enemy');
+    EventLog.showQuick('三波已破', '伪帝亲征！死党云集！', 'demote');
+  }
+
   function updateEnemyMotion(e, player, layout, dt) {
     const density = Math.min(1, spawnCount / TOTAL);
-    const cluster = 0.45 + density * 1.1;
-
     const toPx = player.x - e.x;
-    const steerCap = 55 + density * 65;
+    const toPy = player.y - e.y;
+    const steerCap = 70 + density * 80;
     const steerX = Math.sign(toPx) * Math.min(Math.abs(toPx), steerCap);
-    e.vx = e.vx * 0.86 + steerX * dt * (1.4 + density * 2.2);
+    e.vx = e.vx * 0.84 + steerX * dt * (2 + density * 2.8);
 
     let avgX = 0;
     let avgY = 0;
     let near = 0;
     enemies.forEach((o) => {
-      if (o === e) return;
+      if (o === e || o.isBoss) return;
       const d = Math.hypot(o.x - e.x, o.y - e.y);
       if (d > 72 || d < 4) return;
       avgX += o.x;
@@ -241,14 +309,54 @@ const CoronationBattle = (() => {
     if (near > 0) {
       avgX /= near;
       avgY /= near;
-      e.vx += (avgX - e.x) * (0.14 + density * 0.22) * dt;
-      e.y += (avgY - e.y) * (0.06 + density * 0.1) * dt;
+      e.vx += (avgX - e.x) * (0.18 + density * 0.28) * dt;
+      e.y += (avgY - e.y) * (0.08 + density * 0.14) * dt;
     }
 
-    e.vy = ENEMY_DRIFT * (0.75 + density * 0.55);
+    const rush = ENEMY_DRIFT * (0.95 + density * 0.75);
+    const dive = toPy > 0 ? Math.min(toPy * 0.12, 90) : 0;
+    e.vy = rush + dive * 0.35;
     e.x += e.vx * dt;
     e.y += e.vy * dt;
     clampUnit(e, layout);
+  }
+
+  function updateMinionMotion(e, player, layout, dt) {
+    const toPx = player.x - e.x;
+    const toPy = player.y - e.y;
+    e.vx = e.vx * 0.82 + Math.sign(toPx) * Math.min(Math.abs(toPx), 80) * dt * 2.4;
+    const rush = MINION_DRIFT + Math.min(Math.max(0, toPy) * 0.15, 100);
+    e.vy = rush;
+    e.x += e.vx * dt;
+    e.y += e.vy * dt;
+    clampUnit(e, layout);
+  }
+
+  function updateBoss(boss, player, layout, dt) {
+    boss.pulse = (boss.pulse || 0) + dt * 3.2;
+    boss.swayT = (boss.swayT || 0) + dt;
+    const cx = layout.trackLeft + layout.trackWidth / 2;
+    const sway = Math.sin(boss.swayT * 1.1) * (layout.trackWidth * 0.22);
+    boss.x = cx + sway;
+    boss.y = layout.playTop + 48 + Math.sin(boss.pulse * 0.5) * 10;
+    clampUnit(boss, layout);
+
+    boss.fireCd -= dt;
+    if (boss.fireCd <= 0) {
+      boss.fireCd = BOSS_FIRE_MIN + Math.random() * (BOSS_FIRE_MAX - BOSS_FIRE_MIN);
+      const spread = [-52, -24, 0, 24, 52];
+      const speed = BOSS_BULLET_SPEED;
+      const by = boss.y + boss.h / 2;
+      spread.forEach((off) => {
+        spawnBall(boss.x, by, player.x + off, player.y, speed, 'enemy');
+      });
+    }
+
+    boss.minionCd -= dt;
+    if (boss.minionCd <= 0 && countMinions() < BOSS_MAX_MINIONS) {
+      boss.minionCd = BOSS_MINION_INTERVAL * (0.82 + Math.random() * 0.36);
+      enemies.push(makeMinion(layout, boss.x));
+    }
   }
 
   function tick(dt, layout, player, input) {
@@ -283,11 +391,30 @@ const CoronationBattle = (() => {
       player.y = p.y;
     }
 
-    trySpawn(dt, layout);
+    if (phase === 'boss_intro') {
+      bossIntroLeft -= dt;
+      if (bossIntroLeft <= 0) {
+        phase = 'boss';
+        spawnBoss(layout);
+      }
+    } else if (phase === 'waves') {
+      trySpawnWaves(dt, layout);
+      if (spawnCount >= TOTAL && enemies.length === 0) {
+        beginBossPhase();
+      }
+    }
 
     enemies.forEach((e) => {
       e.pulse = (e.pulse || 0) + dt * 4;
-      updateEnemyMotion(e, player, layout, dt);
+      if (e.isBoss) {
+        updateBoss(e, player, layout, dt);
+        return;
+      }
+      if (phase === 'boss') {
+        updateMinionMotion(e, player, layout, dt);
+      } else {
+        updateEnemyMotion(e, player, layout, dt);
+      }
       e.fireCd -= dt;
       if (e.fireCd > 0) return;
       e.fireCd = ENEMY_FIRE_MIN + Math.random() * (ENEMY_FIRE_MAX - ENEMY_FIRE_MIN);
@@ -360,7 +487,8 @@ const CoronationBattle = (() => {
           if (!Renderer.aabb(unitBox(e), br)) continue;
           e.hits += 1;
           if (e.hits >= e.maxHits) {
-            if (b.side === 'player' && Math.random() < LIGHT_DROP_CHANCE) {
+            const wasBoss = e.isBoss;
+            if (b.side === 'player' && !wasBoss && Math.random() < LIGHT_DROP_CHANCE) {
               drops.push({
                 x: e.x,
                 y: e.y,
@@ -370,6 +498,9 @@ const CoronationBattle = (() => {
               });
             }
             enemies.splice(i, 1);
+            if (wasBoss) {
+              bullets = bullets.filter((bl) => bl.side !== 'enemy');
+            }
           }
           return false;
         }
@@ -389,13 +520,15 @@ const CoronationBattle = (() => {
     });
 
     if (playerHits >= PLAYER_MAX_HITS) return 'lose';
-    if (spawnCount >= TOTAL && enemies.length === 0) return 'win';
+    if (phase === 'boss' && !getBoss()) return 'win';
     return null;
   }
 
   function getHud() {
+    const boss = getBoss();
     return {
-      wave: waveIdx + 1,
+      phase,
+      wave: phase === 'boss' || phase === 'boss_intro' ? 0 : waveIdx + 1,
       enemiesLeft: enemies.length,
       spawnDone: spawnCount >= TOTAL,
       spawned: spawnCount,
@@ -405,7 +538,11 @@ const CoronationBattle = (() => {
       hits: playerHits,
       maxHits: PLAYER_MAX_HITS,
       alliesLeft: allies.length,
-      fireReady: playerFireCd <= 0
+      fireReady: playerFireCd <= 0,
+      bossIntroLeft: Math.max(0, bossIntroLeft),
+      bossHits: boss ? boss.hits : 0,
+      bossMaxHits: BOSS_MAX_HITS,
+      bossActive: !!boss
     };
   }
 

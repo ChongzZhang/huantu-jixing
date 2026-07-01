@@ -925,7 +925,9 @@ const Game = (() => {
 
     if (Coronation.isActive()) {
       CoronationBattle.getAllies().forEach((npc) => Renderer.drawNpc(ctx, npc, 'ally'));
-      CoronationBattle.getEnemies().forEach((npc) => Renderer.drawNpc(ctx, npc, 'enemy'));
+      CoronationBattle.getEnemies().forEach((npc) => {
+        Renderer.drawNpc(ctx, npc, npc.isBoss ? 'boss' : 'enemy');
+      });
       CoronationBattle.getDrops().forEach((d) => Renderer.drawLightDrop(ctx, d));
       CoronationBattle.getBullets().forEach((b) => Renderer.drawBattleBullet(ctx, b));
     } else {

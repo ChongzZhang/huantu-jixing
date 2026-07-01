@@ -403,15 +403,17 @@ const Renderer = (() => {
   function drawBattleHpBar(ctx, x, y, w, h, hits, maxHits, variant) {
     const hp = Math.max(0, maxHits - hits);
     const pct = maxHits > 0 ? hp / maxHits : 0;
-    const barW = Math.max(w, 28);
-    const barH = 4;
+    const isBoss = variant === 'boss';
+    const barW = isBoss ? Math.max(w * 1.35, 42) : Math.max(w, 28);
+    const barH = isBoss ? 6 : 4;
     const bx = x - barW / 2;
-    const by = y - h / 2 - 9;
+    const by = y - h / 2 - (isBoss ? 12 : 9);
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     roundRect(ctx, bx, by, barW, barH, 2);
     ctx.fill();
-    const fill = variant === 'enemy' ? '#c83838'
+    const fill = variant === 'boss' ? '#ffd040'
+      : variant === 'enemy' ? '#c83838'
       : variant === 'ally' ? '#3a88b8' : '#d8a820';
     ctx.fillStyle = fill;
     roundRect(ctx, bx, by, barW * pct, barH, 2);
@@ -449,14 +451,16 @@ const Renderer = (() => {
     const isRival = npc.rival && !battleRole;
     const isEnemy = battleRole === 'enemy';
     const isAlly = battleRole === 'ally';
+    const isBoss = battleRole === 'boss' || npc.isBoss;
     const alpha = (knock ? 0.88 : 0.92) * (npc.fade ?? 1);
     if (npc.state === 'respawn') return;
 
-    const showBattleHp = battleRole && npc.maxHits != null;
+    const showBattleHp = (battleRole || npc.isBoss) && npc.maxHits != null;
     if (showBattleHp) {
+      const role = npc.isBoss ? 'boss' : battleRole;
       drawBattleHpBar(
         ctx, npc.x, npc.y, npc.w, npc.h,
-        npc.hits || 0, npc.maxHits, battleRole
+        npc.hits || 0, npc.maxHits, role
       );
     }
 
@@ -495,13 +499,13 @@ const Renderer = (() => {
       y: 0,
       w: npc.w,
       h: npc.h,
-      robeTop: lighten(c, isRival ? 34 : 28),
+      robeTop: lighten(c, isBoss ? 42 : (isRival ? 34 : 28)),
       robeMid: c,
-      robeBot: darken(c, 22),
-      beltColor: isRival ? COLORS.goldLight : '#c8b888',
-      accent: isRival ? COLORS.gold : null,
-      mini: true,
-      name: knock ? '' : npc.name,
+      robeBot: darken(c, isBoss ? 12 : 22),
+      beltColor: isBoss ? '#ffd700' : (isRival ? COLORS.goldLight : '#c8b888'),
+      accent: isBoss ? '#ffd700' : (isRival ? COLORS.gold : null),
+      mini: !isBoss,
+      name: knock ? '' : (isBoss ? '伪帝' : npc.name),
       pulse: npc.pulse || 0,
       alpha
     });
@@ -520,6 +524,18 @@ const Renderer = (() => {
       ctx.beginPath();
       ctx.arc(0, 0, npc.w * 0.62, 0, Math.PI * 2);
       ctx.stroke();
+    }
+    if (isBoss) {
+      ctx.strokeStyle = 'rgba(255,215,80,0.95)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, npc.w * 0.68, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,230,120,0.35)';
+      ctx.font = `bold ${Math.max(12, npc.w * 0.22)}px KaiTi, serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('帝', 0, -npc.h * 0.08);
     }
     if (isAlly) {
       ctx.strokeStyle = 'rgba(50,120,160,0.8)';
@@ -644,15 +660,25 @@ const Renderer = (() => {
     const meta = hud || {};
     const w = layout.playAreaW;
     const y = layout.hudH + layout.laneHeaderH + 6;
-    const wave = meta.wave || 1;
     const hits = meta.playerHits || 0;
     const max = meta.playerMaxHits || 3;
     const allies = meta.alliesLeft || 0;
-    const enemies = meta.enemiesLeft || 0;
-    const spawnTxt = meta.spawnDone ? '' : ` · 来${meta.spawned}/${meta.total}`;
     const fireTxt = meta.fireReady ? ' · 可击' : '';
+    let line;
+    if (meta.phase === 'boss_intro') {
+      const sec = Math.ceil(meta.bossIntroLeft || 0);
+      line = `伪帝驾临 · ${sec} 秒后决战${fireTxt}`;
+    } else if (meta.phase === 'boss' || meta.bossActive) {
+      const bh = (meta.bossMaxHits || 16) - (meta.bossHits || 0);
+      line = `殿陛决战 · 伪帝 ${bh}/${meta.bossMaxHits || 16} · 小怪${meta.enemiesLeft - 1} · 命${max - hits}/${max} · 友${allies}${fireTxt}`;
+    } else {
+      const wave = meta.wave || 1;
+      const enemies = meta.enemiesLeft || 0;
+      const spawnTxt = meta.spawnDone ? '' : ` · 来${meta.spawned}/${meta.total}`;
+      line = `逼宫战 · 第${wave}波 · 敌${enemies}${spawnTxt} · 命${max - hits}/${max} · 友${allies}${fireTxt}`;
+    }
     ctx.save();
-    ctx.fillStyle = 'rgba(90, 20, 20, 0.82)';
+    ctx.fillStyle = meta.bossActive ? 'rgba(70, 10, 10, 0.9)' : 'rgba(90, 20, 20, 0.82)';
     roundRect(ctx, 8, y, w - 16, 28, 4);
     ctx.fill();
     ctx.strokeStyle = '#ffd700';
@@ -662,11 +688,7 @@ const Renderer = (() => {
     ctx.font = 'bold 13px KaiTi, serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(
-      `逼宫战 · 第${wave}波 · 敌${enemies}${spawnTxt} · 命${max - hits}/${max} · 友${allies}${fireTxt}`,
-      w / 2,
-      y + 14
-    );
+    ctx.fillText(line, w / 2, y + 14);
     ctx.restore();
   }
 
