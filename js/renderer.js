@@ -752,9 +752,9 @@ const Renderer = (() => {
       const wait = Math.max(0, Math.ceil(meta.bossBridgeT || 0));
       line = `殿门洞开 · 伪帝将现${wait > 0 ? ` · ${wait}s` : ''} · 命${max - hits}/${max} · 援${allies} · 破阵接逼宫`;
     } else if (meta.phase === 'boss' || meta.bossActive) {
-      const bh = (meta.bossMaxHits || 16) - (meta.bossHits || 0);
+      const bh = (meta.bossMaxHits || 80) - (meta.bossHits || 0);
       const minions = Math.max(0, (meta.enemiesLeft || 1) - 1);
-      line = `逼宫决战 · 伪帝 ${bh}/${meta.bossMaxHits || 16} · 小怪${minions} · 命${max - hits}/${max} · 援${allies} · 自动`;
+      line = `逼宫决战 · 伪帝 ${bh}/${meta.bossMaxHits || 80} · 小怪${minions} · 命${max - hits}/${max} · 援${allies} · 自动`;
     } else {
       const enemies = meta.enemiesLeft || 0;
       const oSpawn = meta.officialSpawned ?? 0;

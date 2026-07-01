@@ -428,7 +428,7 @@ const Game = (() => {
       const hud = CoronationBattle.getHud();
       if (CoronationBattle.isBossPhase() || CoronationBattle.isBossBridgePhase()) {
         const boss = hud.bossActive;
-        if (boss) return `帝${(hud.bossMaxHits || 16) - (hud.bossHits || 0)}`;
+        if (boss) return `帝${(hud.bossMaxHits || 80) - (hud.bossHits || 0)}`;
         if (CoronationBattle.isBossBridgePhase()) return '伪帝';
         return '…';
       }

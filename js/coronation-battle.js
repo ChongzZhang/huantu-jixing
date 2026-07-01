@@ -40,7 +40,7 @@ const CoronationBattle = (() => {
   const ALLY_DRIFT = 28;
   const PLAYER_MAX_HITS = 3;
   const UNIT_MAX_HITS = 2;
-  const BOSS_MAX_HITS = 16;
+  const BOSS_MAX_HITS = 80;
   const LIGHT_DROP_CHANCE = 0.18;
   const LIGHT_INVINCIBLE = 10;
   const HIT_IFRAME = 0.55;
