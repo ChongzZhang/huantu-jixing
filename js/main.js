@@ -331,7 +331,7 @@ const Game = (() => {
       CoronationBattle.skipToBossPhase(layout);
       EventLog.showQuick('测试模式', '直抵伪帝决战 · 殿陛 Boss', 'promote');
     } else {
-      EventLog.showQuick('测试模式', '直抵逼宫战 · 四波百敌后伪帝', 'promote');
+      EventLog.showQuick('测试模式', '直抵逼宫战 · 八波二百敌后伪帝', 'promote');
     }
     return true;
   }
@@ -836,9 +836,6 @@ const Game = (() => {
     const y = e.clientY - rect.top;
 
     const inPlay = layout.mode === 'bottom' ? y <= layout.panelY : x <= layout.panelX;
-    if (inPlay && Coronation.isActive()) {
-      if (CoronationBattle.tryPlayerFire(player)) return;
-    }
     if (inPlay && Impeachment.tryPlayerFire(player, Rivals.getList(), Npcs.getList())) {
       return;
     }

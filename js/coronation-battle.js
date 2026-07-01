@@ -1,12 +1,13 @@
 /* 宦途疾行 · 黄袍加身终局 — 飞机大战式逼宫战 */
 const CoronationBattle = (() => {
-  const TOTAL = 100;
+  const TOTAL = 200;
+  const ALLY_TARGET = 130;
   const BASE_SPAWN_INTERVAL = 0.78;
   const BASE_SPAWN_BATCH = 2;
-  const WAVE_SIZES = [25, 25, 25, 25];
-  /** 四轮对战：波次越高略加速（幅度收敛） */
-  const WAVE_SPAWN_MULT = [1, 1.18, 1.32, 1.45];
-  const WAVE_FIRE_MULT = [1, 1.12, 1.24, 1.36];
+  const WAVE_SIZES = [25, 25, 25, 25, 25, 25, 25, 25];
+  /** 八轮对战：波次越高略加速（幅度收敛） */
+  const WAVE_SPAWN_MULT = [1, 1.14, 1.26, 1.36, 1.44, 1.50, 1.55, 1.58];
+  const WAVE_FIRE_MULT = [1, 1.10, 1.20, 1.28, 1.34, 1.38, 1.42, 1.45];
   const WAVE_BREAKS = (() => {
     const out = [];
     let acc = 0;
@@ -18,7 +19,7 @@ const CoronationBattle = (() => {
   })();
   const WAVE_PAUSE = 2.5;
   const BALL_R = 12;
-  const PLAYER_FIRE_CD = 0.3;
+  const PLAYER_FIRE_CD = 0.22;
   const PLAYER_BULLET_SPEED = 500;
   const ALLY_BULLET_SPEED = 420;
   const ENEMY_BULLET_SPEED = 200;
@@ -71,6 +72,10 @@ const CoronationBattle = (() => {
   const FOE_SURNAMES = ['韩', '富', '吕', '晏', '欧阳', '范', '包', '曾', '蔡', '庞', '文', '种'];
   const FOE_GIVEN1 = ['彦', '子', '夷', '元', '公', '君', '仲', '文', '正', '德', '师'];
   const FOE_GIVEN2 = ['博', '坚', '简', '殊', '修', '弼', '拯', '巩', '京', '卞', '通'];
+  const ALLY_SURNAMES = ['李', '王', '张', '赵', '刘', '陈', '杨', '黄', '周', '吴', '徐', '孙'];
+  const ALLY_GIVEN1 = ['仲', '彦', '子', '君', '元', '正', '师', '希', '永', '升', '执', '文'];
+  const ALLY_GIVEN2 = ['文', '固', '国', '中', '范', '谟', '修', '厚', '言', '之', '道', '甫'];
+  const ALLY_ROBES = ['#3a5a6a', '#4a6a7a', '#3a5868', '#456878', '#3d6270'];
 
   let active = false;
   let phase = 'waves';
@@ -109,6 +114,46 @@ const CoronationBattle = (() => {
     const g2 = FOE_GIVEN2[Math.floor(Math.random() * FOE_GIVEN2.length)];
     const name = sn + g1 + g2;
     return { rankTitle, name };
+  }
+
+  function randomAllyName() {
+    const sn = ALLY_SURNAMES[Math.floor(Math.random() * ALLY_SURNAMES.length)];
+    const g1 = ALLY_GIVEN1[Math.floor(Math.random() * ALLY_GIVEN1.length)];
+    const g2 = ALLY_GIVEN2[Math.floor(Math.random() * ALLY_GIVEN2.length)];
+    return sn + g1 + g2;
+  }
+
+  function makeReinforcementAlly(layout, index) {
+    const size = Lanes.fitSize(layout, 22, 28);
+    const margin = size.w / 2 + 6;
+    const span = Math.max(20, layout.trackWidth - margin * 2);
+    const bandTop = layout.playTop + layout.playHeight * 0.48;
+    const bandH = layout.playHeight * 0.42;
+    return {
+      id: 'reinforce_' + index,
+      name: randomAllyName(),
+      x: layout.trackLeft + margin + Math.random() * span,
+      y: bandTop + Math.random() * bandH,
+      w: size.w,
+      h: size.h,
+      robe: ALLY_ROBES[Math.floor(Math.random() * ALLY_ROBES.length)],
+      pulse: Math.random() * Math.PI * 2,
+      state: 'active',
+      side: 'ally',
+      hits: 0,
+      maxHits: UNIT_MAX_HITS,
+      fireCd: 0.4 + Math.random() * 1.4,
+      vx: 0,
+      vy: ALLY_DRIFT,
+      battle: true
+    };
+  }
+
+  function fillReinforcements(layout) {
+    const need = ALLY_TARGET - allies.length;
+    for (let i = 0; i < need; i++) {
+      allies.push(makeReinforcementAlly(layout, i));
+    }
   }
 
   function adoptUnit(src, side) {
@@ -235,8 +280,9 @@ const CoronationBattle = (() => {
       const u = adoptUnit(r, 'ally');
       if (u) allies.push(u);
     });
+    fillReinforcements(layout);
     spawnAcc = 0.4;
-    EventLog.showQuick('四轮对战', '敌军来袭！四波尽破，方入逼宫！', 'demote');
+    EventLog.showQuick('八轮对战', `援军${allies.length}人集结！八波尽破，方入逼宫！`, 'promote');
   }
 
   function skipToBossPhase(layout) {
@@ -348,7 +394,7 @@ const CoronationBattle = (() => {
     phase = 'boss';
     bullets = bullets.filter((b) => b.side !== 'enemy');
     spawnBoss(layout);
-    EventLog.showQuick('四轮已破', '逼宫决战！击溃伪帝登基！', 'demote');
+    EventLog.showQuick('八轮已破', '逼宫决战！击溃伪帝登基！', 'demote');
   }
 
   function updateEnemyMotion(e, player, layout, dt) {
@@ -456,6 +502,8 @@ const CoronationBattle = (() => {
         player.y += (target.y - player.y) * lerp;
       }
     }
+
+    tryPlayerFire(player);
 
     if (phase === 'waves') {
       trySpawnWaves(dt, layout);

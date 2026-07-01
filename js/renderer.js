@@ -715,16 +715,15 @@ const Renderer = (() => {
     const hits = meta.playerHits || 0;
     const max = meta.playerMaxHits || 3;
     const allies = meta.alliesLeft || 0;
-    const fireTxt = meta.fireReady ? ' · 可击' : '';
     let line;
     if (meta.phase === 'boss' || meta.bossActive) {
       const bh = (meta.bossMaxHits || 16) - (meta.bossHits || 0);
       const minions = Math.max(0, (meta.enemiesLeft || 1) - 1);
-      line = `逼宫决战 · 伪帝 ${bh}/${meta.bossMaxHits || 16} · 小怪${minions} · 命${max - hits}/${max} · 友${allies}${fireTxt}`;
+      line = `逼宫决战 · 伪帝 ${bh}/${meta.bossMaxHits || 16} · 小怪${minions} · 命${max - hits}/${max} · 友${allies} · 自动`;
     } else {
       const enemies = meta.enemiesLeft || 0;
       const spawnTxt = meta.spawnDone ? '' : ` · 来${meta.spawned}/${meta.total}`;
-      line = `四轮对战 · 第${meta.wave}/${meta.waveTotal || 4}波 · 敌${enemies}${spawnTxt} · 命${max - hits}/${max} · 友${allies}${fireTxt}`;
+      line = `八轮对战 · 第${meta.wave}/${meta.waveTotal || 8}波 · 敌${enemies}${spawnTxt} · 命${max - hits}/${max} · 友${allies} · 自动`;
     }
     ctx.save();
     ctx.fillStyle = meta.bossActive ? 'rgba(70, 10, 10, 0.9)' : 'rgba(90, 20, 20, 0.82)';
