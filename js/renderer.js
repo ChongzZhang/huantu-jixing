@@ -426,21 +426,31 @@ const Renderer = (() => {
     const hp = Math.max(0, maxHits - hits);
     const pct = maxHits > 0 ? hp / maxHits : 0;
     const isBoss = variant === 'boss';
-    const barW = isBoss ? Math.max(w * 1.35, 42) : Math.max(w, 28);
-    const barH = isBoss ? 6 : 4;
+    const barW = isBoss ? Math.max(w * 1.6, 56) : Math.max(w, 28);
+    const barH = isBoss ? 7 : 4;
     const bx = x - barW / 2;
-    const by = y - h / 2 - (isBoss ? 12 : 9);
+    const by = y - h / 2 - (isBoss ? 58 : 9);
     ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillStyle = isBoss ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.35)';
     roundRect(ctx, bx, by, barW, barH, 2);
     ctx.fill();
     const fill = variant === 'boss' ? '#ffd040'
       : variant === 'enemy' ? '#c83838'
       : variant === 'ally' ? '#3a88b8' : '#d8a820';
     ctx.fillStyle = fill;
-    roundRect(ctx, bx, by, barW * pct, barH, 2);
+    roundRect(ctx, bx, by, Math.max(barH, barW * pct), barH, 2);
     ctx.fill();
-    if (pct <= 0.34) {
+    ctx.strokeStyle = isBoss ? 'rgba(255,220,120,0.9)' : 'rgba(255,80,80,0.8)';
+    ctx.lineWidth = isBoss ? 1.5 : 1;
+    roundRect(ctx, bx, by, barW, barH, 2);
+    ctx.stroke();
+    if (isBoss) {
+      ctx.fillStyle = '#fff8e0';
+      ctx.font = `bold ${u(9)}px KaiTi, serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${hp}/${maxHits}`, x, by + barH / 2);
+    } else if (pct <= 0.34) {
       ctx.strokeStyle = 'rgba(255,80,80,0.8)';
       ctx.lineWidth = 1;
       roundRect(ctx, bx, by, barW, barH, 2);
@@ -477,12 +487,11 @@ const Renderer = (() => {
     const alpha = (knock ? 0.88 : 0.92) * (npc.fade ?? 1);
     if (npc.state === 'respawn') return;
 
-    const showBattleHp = (battleRole || npc.isBoss) && npc.maxHits != null;
+    const showBattleHp = (battleRole || npc.isBoss) && npc.maxHits != null && !isBoss;
     if (showBattleHp) {
-      const role = npc.isBoss ? 'boss' : battleRole;
       drawBattleHpBar(
         ctx, npc.x, npc.y, npc.w, npc.h,
-        npc.hits || 0, npc.maxHits, role
+        npc.hits || 0, npc.maxHits, battleRole
       );
     }
 
@@ -569,6 +578,13 @@ const Renderer = (() => {
     }
 
     ctx.restore();
+
+    if (isBoss && npc.maxHits != null) {
+      drawBattleHpBar(
+        ctx, npc.x, npc.y, npc.w, npc.h,
+        npc.hits || 0, npc.maxHits, 'boss'
+      );
+    }
   }
 
   function drawAmnesty(ctx, a) {
