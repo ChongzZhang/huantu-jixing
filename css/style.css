@@ -95,6 +95,56 @@ body::before {
   #game {
     cursor: default;
   }
+
+  .tutorial-screen.overlay-ui {
+    align-items: flex-start;
+    justify-content: center;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: max(10px, env(safe-area-inset-top, 10px)) 10px max(14px, env(safe-area-inset-bottom, 14px));
+  }
+
+  .tutorial-panel {
+    width: min(100%, 360px);
+    max-width: 96vw;
+    padding: 18px 14px 14px;
+    margin: auto 0;
+    flex-shrink: 0;
+  }
+
+  .tutorial-scene {
+    height: min(148px, 34vw);
+    min-height: 120px;
+    margin-bottom: 10px;
+  }
+
+  .tutorial-panel h2 {
+    font-size: 1.28rem;
+    margin-bottom: 6px;
+  }
+
+  .tutorial-body {
+    font-size: 0.98rem;
+    line-height: 1.55;
+  }
+
+  .tutorial-continue {
+    margin-top: 12px;
+    font-size: 0.95rem;
+  }
+
+  .tutorial-progress {
+    font-size: 0.8rem;
+    margin-bottom: 4px;
+  }
+
+  .tutorial-skip {
+    top: 8px;
+    right: 10px;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+  }
 }
 
 #game {

@@ -286,7 +286,7 @@ const Game = (() => {
 
   function getSpeed() {
     if (Coronation.isActive()) return SPEED_MAX;
-    const progress = getProgress();
+    const progress = getProgress() * 0.5;
     const curve = Math.pow(progress, 0.85) * 0.32 + Math.pow(progress, 3.6) * 0.68;
     const rankBoost = Ranks.benguanLevel() * 3.8;
     return SPEED_MIN + (SPEED_MAX - SPEED_MIN) * curve + rankBoost;

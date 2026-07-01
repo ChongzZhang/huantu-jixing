@@ -59,7 +59,7 @@ const Spawner = (() => {
   }
 
   function spawnRateMult() {
-    return 1.2 + Math.random() * 0.2;
+    return (1.2 + Math.random() * 0.2) * 1.3;
   }
 
   function pickWeighted(list, getWeight) {

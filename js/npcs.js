@@ -6,7 +6,7 @@ const Npcs = (() => {
   const ROBES = ['#5a6a7a', '#4a5c68', '#6a5a4a', '#556855', '#5c4a62', '#4a5868'];
 
   const MAX_ACTIVE = 6;
-  const SPAWN_INTERVAL = 9;
+  const SPAWN_INTERVAL = 9 / 1.35;
   const SPAWN_BATCH = 2;
   const SEED_COUNT = 3;
   const FALL_MULT_BASE = 0.5;
