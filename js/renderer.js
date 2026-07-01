@@ -745,7 +745,7 @@ const Renderer = (() => {
     const hits = meta.playerHits || 0;
     const max = meta.playerMaxHits || 3;
     const allies = meta.alliesLeft || 0;
-    const allyCap = meta.allyTarget || 148;
+    const allyCap = meta.allyTarget || 188;
     const allyIn = meta.allySpawned ?? allies;
     let line;
     if (meta.phase === 'boss_bridge') {
