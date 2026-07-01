@@ -38,6 +38,12 @@ const CoronationBattle = (() => {
   const BOSS_FIRE_MIN = 0.36 / ENEMY_FIRE_RATE;
   const BOSS_FIRE_MAX = 0.58 / ENEMY_FIRE_RATE;
   const BOSS_MINION_INTERVAL = 1.85 / ENEMY_FIRE_RATE;
+  const BOSS_MAX_MINIONS = 14;
+  const BOSS_INTRO_SEC = 2.2;
+
+  function rollEnemyFireCd() {
+    return ENEMY_FIRE_MIN + Math.random() * (ENEMY_FIRE_MAX - ENEMY_FIRE_MIN);
+  }
 
   const HIGH_RANKS = [
     '宰相', '枢密使', '参政知事', '尚书令', '侍中', '同平章事',
@@ -160,7 +166,7 @@ const CoronationBattle = (() => {
       side: 'enemy',
       hits: 0,
       maxHits: UNIT_MAX_HITS,
-      fireCd: 0.6 + Math.random() * 1.2,
+      fireCd: rollEnemyFireCd() * 0.7,
       vx: (Math.random() - 0.5) * 36,
       vy: ENEMY_DRIFT,
       battle: true
