@@ -1,12 +1,12 @@
 /* 宦途疾行 · 黄袍加身终局 — 飞机大战式逼宫战 */
 const CoronationBattle = (() => {
   const TOTAL = 100;
-  const BASE_SPAWN_INTERVAL = 0.52;
+  const BASE_SPAWN_INTERVAL = 0.78;
   const BASE_SPAWN_BATCH = 2;
   const WAVE_SIZES = [25, 25, 25, 25];
-  /** 四轮对战：波次越高，刷怪越快、射速越快 */
-  const WAVE_SPAWN_MULT = [1, 1.38, 1.78, 2.25];
-  const WAVE_FIRE_MULT = [1, 1.28, 1.58, 1.95];
+  /** 四轮对战：波次越高略加速（幅度收敛） */
+  const WAVE_SPAWN_MULT = [1, 1.18, 1.32, 1.45];
+  const WAVE_FIRE_MULT = [1, 1.12, 1.24, 1.36];
   const WAVE_BREAKS = (() => {
     const out = [];
     let acc = 0;
@@ -35,19 +35,18 @@ const CoronationBattle = (() => {
   const LIGHT_DROP_CHANCE = 0.3;
   const LIGHT_INVINCIBLE = 10;
   const HIT_IFRAME = 0.55;
-  const ENEMY_FIRE_RATE = 1.2;
+  const ENEMY_FIRE_RATE = 0.88;
   const ENEMY_FIRE_MIN = 1.4 / ENEMY_FIRE_RATE;
   const ENEMY_FIRE_MAX = 2.6 / ENEMY_FIRE_RATE;
-  const BOSS_FIRE_MIN = 0.36 / ENEMY_FIRE_RATE;
-  const BOSS_FIRE_MAX = 0.58 / ENEMY_FIRE_RATE;
-  const BOSS_MINION_INTERVAL = 1.85 / ENEMY_FIRE_RATE;
-  const BOSS_MAX_MINIONS = 14;
-  const BOSS_INTRO_SEC = 2.2;
+  const BOSS_FIRE_MIN = 0.48 / ENEMY_FIRE_RATE;
+  const BOSS_FIRE_MAX = 0.72 / ENEMY_FIRE_RATE;
+  const BOSS_MINION_INTERVAL = 2.4 / ENEMY_FIRE_RATE;
+  const BOSS_MAX_MINIONS = 12;
 
   function rollEnemyFireCd() {
     const w = combatWaveIndex();
-    const min = (1.4 / ENEMY_FIRE_RATE) / WAVE_FIRE_MULT[w];
-    const max = (2.6 / ENEMY_FIRE_RATE) / WAVE_FIRE_MULT[w];
+    const min = (1.65 / ENEMY_FIRE_RATE) / WAVE_FIRE_MULT[w];
+    const max = (3.1 / ENEMY_FIRE_RATE) / WAVE_FIRE_MULT[w];
     return min + Math.random() * (max - min);
   }
 
@@ -61,7 +60,7 @@ const CoronationBattle = (() => {
   }
 
   function spawnBatchForWave() {
-    return Math.min(7, BASE_SPAWN_BATCH + combatWaveIndex() + 1);
+    return Math.min(5, BASE_SPAWN_BATCH + combatWaveIndex());
   }
 
   const HIGH_RANKS = [
@@ -86,7 +85,6 @@ const CoronationBattle = (() => {
   let playerHits = 0;
   let playerFireCd = 0;
   let hitFlash = 0;
-  let bossIntroLeft = 0;
 
   function reset() {
     active = false;
@@ -102,7 +100,6 @@ const CoronationBattle = (() => {
     playerHits = 0;
     playerFireCd = 0;
     hitFlash = 0;
-    bossIntroLeft = 0;
   }
 
   function randomFoeIdentity() {
@@ -216,7 +213,7 @@ const CoronationBattle = (() => {
       swayT: 0,
       battle: true
     });
-    EventLog.showQuick('殿陛决战', '伪帝御前！击溃方可登基！', 'demote');
+    EventLog.showQuick('逼宫决战', '伪帝御前！击溃方可登基！', 'demote');
   }
 
   function countMinions() {
@@ -242,13 +239,13 @@ const CoronationBattle = (() => {
     EventLog.showQuick('四轮对战', '敌军来袭！四波尽破，方入逼宫！', 'demote');
   }
 
-  function skipToBossPhase() {
-    phase = 'boss_intro';
-    bossIntroLeft = 1.2;
+  function skipToBossPhase(layout) {
+    phase = 'boss';
     spawnCount = TOTAL;
     waveIdx = WAVE_SIZES.length - 1;
-    enemies = enemies.filter((e) => e.isBoss);
+    enemies = [];
     bullets = bullets.filter((b) => b.side !== 'enemy');
+    spawnBoss(layout);
   }
 
   function isActive() {
@@ -347,11 +344,11 @@ const CoronationBattle = (() => {
     }
   }
 
-  function beginBossPhase() {
-    phase = 'boss_intro';
-    bossIntroLeft = BOSS_INTRO_SEC;
+  function beginBossPhase(layout) {
+    phase = 'boss';
     bullets = bullets.filter((b) => b.side !== 'enemy');
-    EventLog.showQuick('四轮已破', '逼宫决战！伪帝亲征！', 'demote');
+    spawnBoss(layout);
+    EventLog.showQuick('四轮已破', '逼宫决战！击溃伪帝登基！', 'demote');
   }
 
   function updateEnemyMotion(e, player, layout, dt) {
@@ -460,16 +457,10 @@ const CoronationBattle = (() => {
       }
     }
 
-    if (phase === 'boss_intro') {
-      bossIntroLeft -= dt;
-      if (bossIntroLeft <= 0) {
-        phase = 'boss';
-        spawnBoss(layout);
-      }
-    } else if (phase === 'waves') {
+    if (phase === 'waves') {
       trySpawnWaves(dt, layout);
       if (spawnCount >= TOTAL && enemies.length === 0) {
-        beginBossPhase();
+        beginBossPhase(layout);
       }
     }
 
@@ -597,7 +588,7 @@ const CoronationBattle = (() => {
     const boss = getBoss();
     return {
       phase,
-      wave: phase === 'boss' || phase === 'boss_intro' ? 0 : Math.min(waveIdx + 1, WAVE_SIZES.length),
+      wave: phase === 'boss' ? 0 : Math.min(waveIdx + 1, WAVE_SIZES.length),
       waveTotal: WAVE_SIZES.length,
       enemiesLeft: enemies.length,
       spawnDone: spawnCount >= TOTAL,
@@ -609,7 +600,6 @@ const CoronationBattle = (() => {
       maxHits: PLAYER_MAX_HITS,
       alliesLeft: allies.length,
       fireReady: playerFireCd <= 0,
-      bossIntroLeft: Math.max(0, bossIntroLeft),
       bossHits: boss ? boss.hits : 0,
       bossMaxHits: BOSS_MAX_HITS,
       bossActive: !!boss
@@ -630,7 +620,7 @@ const CoronationBattle = (() => {
   }
 
   function isBossPhase() {
-    return phase === 'boss' || phase === 'boss_intro';
+    return phase === 'boss';
   }
 
   return {

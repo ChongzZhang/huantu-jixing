@@ -717,10 +717,7 @@ const Renderer = (() => {
     const allies = meta.alliesLeft || 0;
     const fireTxt = meta.fireReady ? ' · 可击' : '';
     let line;
-    if (meta.phase === 'boss_intro') {
-      const sec = Math.ceil(meta.bossIntroLeft || 0);
-      line = `逼宫决战 · 伪帝驾临 ${sec}s${fireTxt}`;
-    } else if (meta.phase === 'boss' || meta.bossActive) {
+    if (meta.phase === 'boss' || meta.bossActive) {
       const bh = (meta.bossMaxHits || 16) - (meta.bossHits || 0);
       const minions = Math.max(0, (meta.enemiesLeft || 1) - 1);
       line = `逼宫决战 · 伪帝 ${bh}/${meta.bossMaxHits || 16} · 小怪${minions} · 命${max - hits}/${max} · 友${allies}${fireTxt}`;
