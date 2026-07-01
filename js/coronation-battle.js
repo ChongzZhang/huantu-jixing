@@ -27,38 +27,38 @@ const CoronationBattle = (() => {
   })();
   const WAVE_PAUSE = 2.0;
   const BALL_R = 12;
-  const PLAYER_FIRE_CD = 0.24;
-  const PLAYER_BULLET_SPEED = 490;
-  const ALLY_BULLET_SPEED = 325;
+  const PLAYER_FIRE_CD = 0.19;
+  const PLAYER_BULLET_SPEED = 520;
+  const ALLY_BULLET_SPEED = 360;
   const ENEMY_BULLET_SPEED = 225;
   const BOSS_BULLET_SPEED = 225;
   const PLAYER_MOVE_SPEED = 340;
   const TOUCH_LERP = 22;
   const TOUCH_DEADZONE = 5;
-  const ENEMY_DRIFT = 88;
-  const MINION_DRIFT = 106;
+  const ENEMY_DRIFT = 84;
+  const MINION_DRIFT = 100;
   const ALLY_DRIFT = 28;
   const PLAYER_MAX_HITS = 3;
   const UNIT_MAX_HITS = 2;
   const BOSS_MAX_HITS = 16;
-  const LIGHT_DROP_CHANCE = 0.12;
+  const LIGHT_DROP_CHANCE = 0.18;
   const LIGHT_INVINCIBLE = 10;
   const HIT_IFRAME = 0.55;
-  const ENEMY_FIRE_RATE = 1.12;
+  const ENEMY_FIRE_RATE = 1.0;
   const ENEMY_FIRE_MIN = 1.4 / ENEMY_FIRE_RATE;
   const ENEMY_FIRE_MAX = 2.6 / ENEMY_FIRE_RATE;
   const BOSS_FIRE_MIN = 0.48 / ENEMY_FIRE_RATE;
   const BOSS_FIRE_MAX = 0.72 / ENEMY_FIRE_RATE;
-  const BOSS_MINION_INTERVAL = 1.65 / ENEMY_FIRE_RATE;
-  const BOSS_MAX_MINIONS = 26;
-  const ALLY_OFFICIAL_RATE = 0.18;
+  const BOSS_MINION_INTERVAL = 1.85 / ENEMY_FIRE_RATE;
+  const BOSS_MAX_MINIONS = 22;
+  const ALLY_OFFICIAL_RATE = 0.24;
   const BOSS_BRIDGE_SEC = 2.2;
-  const ALLY_SURVIVE_RATE = 0.38;
+  const ALLY_SURVIVE_RATE = 0.5;
 
   function rollEnemyFireCd() {
     const w = combatWaveIndex();
-    const min = (1.35 / ENEMY_FIRE_RATE) / WAVE_FIRE_MULT[w];
-    const max = (2.55 / ENEMY_FIRE_RATE) / WAVE_FIRE_MULT[w];
+    const min = (1.48 / ENEMY_FIRE_RATE) / WAVE_FIRE_MULT[w];
+    const max = (2.75 / ENEMY_FIRE_RATE) / WAVE_FIRE_MULT[w];
     return min + Math.random() * (max - min);
   }
 
@@ -181,7 +181,7 @@ const CoronationBattle = (() => {
       side: 'ally',
       hits: 0,
       maxHits: official ? ALLY_OFFICIAL_MAX_HITS : ALLY_GRUNT_MAX_HITS,
-      fireCd: 1.4 + Math.random() * 1.6,
+      fireCd: 0.7 + Math.random() * 0.8,
       vx: 0,
       vy: -ALLY_DRIFT * 0.5,
       battle: true,
@@ -228,7 +228,7 @@ const CoronationBattle = (() => {
       side,
       hits: 0,
       maxHits: named && !!allyId ? ALLY_OFFICIAL_MAX_HITS : ALLY_GRUNT_MAX_HITS,
-      fireCd: 1.6 + Math.random() * 1.8,
+      fireCd: 1.2 + Math.random() * 1.2,
       vx: 0,
       vy: ALLY_DRIFT,
       battle: true
@@ -421,7 +421,7 @@ const CoronationBattle = (() => {
       if (u) allies.push(u);
     });
     spawnAcc = 0.55;
-    EventLog.showQuick('八轮对战', '敌强我弱，分批对垒！破阵后直抵逼宫', 'demote');
+    EventLog.showQuick('八轮对战', '敌我分批对垒，敌略占上风！破阵后逼宫', 'demote');
   }
 
   function skipToBossPhase(layout) {
@@ -687,11 +687,11 @@ const CoronationBattle = (() => {
       a.pulse = (a.pulse || 0) + dt * 4;
       const target = nearestEnemy(a);
       if (target) {
-        const steer = Math.sign(target.x - a.x) * (a.named ? 36 : 24);
+        const steer = Math.sign(target.x - a.x) * (a.named ? 42 : 30);
         a.vx = steer;
         const toY = target.y - a.y;
-        const chase = a.named ? 0.14 : 0.1;
-        a.vy = -ALLY_DRIFT * 0.12 + Math.sign(toY) * Math.min(Math.abs(toY) * chase, 42);
+        const chase = a.named ? 0.16 : 0.12;
+        a.vy = -ALLY_DRIFT * 0.14 + Math.sign(toY) * Math.min(Math.abs(toY) * chase, 48);
       } else if (a.entering) {
         a.vy = -ALLY_DRIFT * 0.55;
         a.vx *= 0.9;
@@ -704,7 +704,7 @@ const CoronationBattle = (() => {
       clampUnit(a, layout);
       a.fireCd -= dt;
       if (a.fireCd > 0) return;
-      a.fireCd = 2.8 + Math.random() * 1.8;
+      a.fireCd = 2.3 + Math.random() * 1.4;
       const foe = nearestEnemy(a);
       if (!foe) return;
       spawnBall(a.x, a.y - 4, foe.x, foe.y, ALLY_BULLET_SPEED, 'ally');
