@@ -123,36 +123,45 @@ const CoronationBattle = (() => {
     return sn + g1 + g2;
   }
 
-  function makeReinforcementAlly(layout, index) {
-    const size = Lanes.fitSize(layout, 22, 28);
-    const margin = size.w / 2 + 6;
-    const span = Math.max(20, layout.trackWidth - margin * 2);
-    const bandTop = layout.playTop + layout.playHeight * 0.48;
-    const bandH = layout.playHeight * 0.42;
+  function makeReinforcementAlly(layout, index, cols, col, row, colStep, rowStep, bandTop, left, size) {
     return {
       id: 'reinforce_' + index,
-      name: randomAllyName(),
-      x: layout.trackLeft + margin + Math.random() * span,
-      y: bandTop + Math.random() * bandH,
+      name: '',
+      reinforce: true,
+      x: left + colStep * (col + 0.5),
+      y: bandTop + rowStep * (row + 0.5),
       w: size.w,
       h: size.h,
-      robe: ALLY_ROBES[Math.floor(Math.random() * ALLY_ROBES.length)],
-      pulse: Math.random() * Math.PI * 2,
+      robe: ALLY_ROBES[index % ALLY_ROBES.length],
+      pulse: (index % 7) * 0.9,
       state: 'active',
       side: 'ally',
       hits: 0,
       maxHits: UNIT_MAX_HITS,
-      fireCd: 0.4 + Math.random() * 1.4,
+      fireCd: 0.2 + (index % 11) * 0.08,
       vx: 0,
-      vy: ALLY_DRIFT,
+      vy: ALLY_DRIFT * 0.35,
       battle: true
     };
   }
 
   function fillReinforcements(layout) {
     const need = ALLY_TARGET - allies.length;
+    if (need <= 0) return;
+    const cols = 13;
+    const rows = Math.ceil(need / cols);
+    const size = Lanes.fitSize(layout, 15, 19);
+    const margin = size.w / 2 + 2;
+    const left = layout.trackLeft + margin;
+    const span = Math.max(20, layout.trackWidth - margin * 2);
+    const bandTop = layout.playTop + layout.playHeight * 0.56;
+    const bandH = layout.playHeight * 0.34;
+    const colStep = span / cols;
+    const rowStep = bandH / rows;
     for (let i = 0; i < need; i++) {
-      allies.push(makeReinforcementAlly(layout, i));
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      allies.push(makeReinforcementAlly(layout, i, cols, col, row, colStep, rowStep, bandTop, left, size));
     }
   }
 
@@ -647,6 +656,7 @@ const CoronationBattle = (() => {
       hits: playerHits,
       maxHits: PLAYER_MAX_HITS,
       alliesLeft: allies.length,
+      allyTarget: ALLY_TARGET,
       fireReady: playerFireCd <= 0,
       bossHits: boss ? boss.hits : 0,
       bossMaxHits: BOSS_MAX_HITS,
