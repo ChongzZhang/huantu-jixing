@@ -3,12 +3,13 @@ const CoronationBattle = (() => {
   const OFFICIAL_TOTAL = 200;
   const MINION_TOTAL = 160;
   const TOTAL = OFFICIAL_TOTAL + MINION_TOTAL;
-  const ALLY_TARGET = 130;
-  const ALLY_PACE = 0.92;
-  const ALLY_WAVE_SIZES = [16, 16, 16, 16, 16, 16, 17, 17];
+  const ALLY_TARGET = 100;
+  const ALLY_PACE = 0.72;
+  const ALLY_WAVE_SIZES = [13, 13, 12, 12, 12, 12, 13, 13];
   const ALLY_GRUNT_MAX_HITS = 1;
-  const BASE_SPAWN_INTERVAL = 0.72;
-  const BASE_SPAWN_BATCH = 3;
+  const ALLY_OFFICIAL_MAX_HITS = 1;
+  const BASE_SPAWN_INTERVAL = 0.58;
+  const BASE_SPAWN_BATCH = 4;
   const WAVE_OFFICIAL_SIZES = [25, 25, 25, 25, 25, 25, 25, 25];
   const WAVE_MINION_SIZES = [20, 20, 20, 20, 20, 20, 20, 20];
   const WAVE_SIZES = WAVE_OFFICIAL_SIZES.map((n, i) => n + WAVE_MINION_SIZES[i]);
@@ -24,38 +25,40 @@ const CoronationBattle = (() => {
     }
     return out;
   })();
-  const WAVE_PAUSE = 2.5;
+  const WAVE_PAUSE = 2.0;
   const BALL_R = 12;
-  const PLAYER_FIRE_CD = 0.22;
-  const PLAYER_BULLET_SPEED = 500;
-  const ALLY_BULLET_SPEED = 360;
-  const ENEMY_BULLET_SPEED = 200;
+  const PLAYER_FIRE_CD = 0.28;
+  const PLAYER_BULLET_SPEED = 460;
+  const ALLY_BULLET_SPEED = 290;
+  const ENEMY_BULLET_SPEED = 235;
   const BOSS_BULLET_SPEED = 225;
   const PLAYER_MOVE_SPEED = 340;
   const TOUCH_LERP = 22;
   const TOUCH_DEADZONE = 5;
-  const ENEMY_DRIFT = 78;
-  const MINION_DRIFT = 92;
+  const ENEMY_DRIFT = 88;
+  const MINION_DRIFT = 106;
   const ALLY_DRIFT = 28;
   const PLAYER_MAX_HITS = 3;
   const UNIT_MAX_HITS = 2;
   const BOSS_MAX_HITS = 16;
-  const LIGHT_DROP_CHANCE = 0.3;
+  const LIGHT_DROP_CHANCE = 0.12;
   const LIGHT_INVINCIBLE = 10;
   const HIT_IFRAME = 0.55;
-  const ENEMY_FIRE_RATE = 0.88;
+  const ENEMY_FIRE_RATE = 1.12;
   const ENEMY_FIRE_MIN = 1.4 / ENEMY_FIRE_RATE;
   const ENEMY_FIRE_MAX = 2.6 / ENEMY_FIRE_RATE;
   const BOSS_FIRE_MIN = 0.48 / ENEMY_FIRE_RATE;
   const BOSS_FIRE_MAX = 0.72 / ENEMY_FIRE_RATE;
-  const BOSS_MINION_INTERVAL = 2.0 / ENEMY_FIRE_RATE;
-  const BOSS_MAX_MINIONS = 22;
-  const ALLY_OFFICIAL_RATE = 0.28;
+  const BOSS_MINION_INTERVAL = 1.65 / ENEMY_FIRE_RATE;
+  const BOSS_MAX_MINIONS = 26;
+  const ALLY_OFFICIAL_RATE = 0.18;
+  const BOSS_BRIDGE_SEC = 2.2;
+  const ALLY_SURVIVE_RATE = 0.38;
 
   function rollEnemyFireCd() {
     const w = combatWaveIndex();
-    const min = (1.65 / ENEMY_FIRE_RATE) / WAVE_FIRE_MULT[w];
-    const max = (3.1 / ENEMY_FIRE_RATE) / WAVE_FIRE_MULT[w];
+    const min = (1.35 / ENEMY_FIRE_RATE) / WAVE_FIRE_MULT[w];
+    const max = (2.55 / ENEMY_FIRE_RATE) / WAVE_FIRE_MULT[w];
     return min + Math.random() * (max - min);
   }
 
@@ -104,6 +107,7 @@ const CoronationBattle = (() => {
   let spawnAcc = 0;
   let waveIdx = 0;
   let wavePause = 0;
+  let bossBridgeT = 0;
   let playerHits = 0;
   let playerFireCd = 0;
   let hitFlash = 0;
@@ -123,6 +127,7 @@ const CoronationBattle = (() => {
     spawnAcc = 0;
     waveIdx = 0;
     wavePause = 0;
+    bossBridgeT = 0;
     playerHits = 0;
     playerFireCd = 0;
     hitFlash = 0;
@@ -175,8 +180,8 @@ const CoronationBattle = (() => {
       state: 'active',
       side: 'ally',
       hits: 0,
-      maxHits: official ? UNIT_MAX_HITS : ALLY_GRUNT_MAX_HITS,
-      fireCd: 0.8 + Math.random() * 1.0,
+      maxHits: official ? ALLY_OFFICIAL_MAX_HITS : ALLY_GRUNT_MAX_HITS,
+      fireCd: 1.4 + Math.random() * 1.6,
       vx: 0,
       vy: -ALLY_DRIFT * 0.5,
       battle: true,
@@ -222,8 +227,8 @@ const CoronationBattle = (() => {
       state: 'active',
       side,
       hits: 0,
-      maxHits: named && !!allyId ? UNIT_MAX_HITS : ALLY_GRUNT_MAX_HITS,
-      fireCd: 1.0 + Math.random() * 1.4,
+      maxHits: named && !!allyId ? ALLY_OFFICIAL_MAX_HITS : ALLY_GRUNT_MAX_HITS,
+      fireCd: 1.6 + Math.random() * 1.8,
       vx: 0,
       vy: ALLY_DRIFT,
       battle: true
@@ -279,7 +284,7 @@ const CoronationBattle = (() => {
       isMinion: true,
       hits: 0,
       maxHits: UNIT_MAX_HITS,
-      fireCd: rollEnemyFireCd() * 0.55,
+      fireCd: rollEnemyFireCd() * 0.45,
       vx: (Math.random() - 0.5) * 40,
       vy: MINION_DRIFT,
       battle: true
@@ -306,7 +311,7 @@ const CoronationBattle = (() => {
       isMinion: false,
       hits: 0,
       maxHits: UNIT_MAX_HITS,
-      fireCd: rollEnemyFireCd() * 0.7,
+      fireCd: rollEnemyFireCd() * 0.55,
       vx: (Math.random() - 0.5) * 36,
       vy: ENEMY_DRIFT,
       battle: true
@@ -334,7 +339,7 @@ const CoronationBattle = (() => {
       isMinion: true,
       hits: 0,
       maxHits: UNIT_MAX_HITS,
-      fireCd: rollEnemyFireCd() * 0.9,
+      fireCd: rollEnemyFireCd() * 0.72,
       vx: (Math.random() - 0.5) * 48,
       vy: MINION_DRIFT,
       battle: true
@@ -344,6 +349,7 @@ const CoronationBattle = (() => {
   }
 
   function spawnBoss(layout) {
+    if (getBoss()) return;
     const size = Lanes.fitSize(layout, 46, 54);
     const cx = layout.trackLeft + layout.trackWidth / 2;
     enemies.push({
@@ -366,7 +372,33 @@ const CoronationBattle = (() => {
       swayT: 0,
       battle: true
     });
-    EventLog.showQuick('逼宫决战', '伪帝御前！击溃方可登基！', 'demote');
+  }
+
+  function trimAlliesForBossBridge() {
+    if (allies.length <= 6) return;
+    const survive = Math.max(6, Math.floor(allies.length * ALLY_SURVIVE_RATE));
+    for (let i = allies.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = allies[i];
+      allies[i] = allies[j];
+      allies[j] = tmp;
+    }
+    allies.length = survive;
+  }
+
+  function beginBossPhase(layout) {
+    if (phase !== 'waves') return;
+    phase = 'boss_bridge';
+    bossBridgeT = BOSS_BRIDGE_SEC;
+    bullets = bullets.filter((b) => b.side !== 'enemy');
+    trimAlliesForBossBridge();
+    EventLog.showQuick('八阵已破', '殿门洞开！伪帝御前，逼宫正酣……', 'demote');
+  }
+
+  function finalizeBossPhase(layout) {
+    phase = 'boss';
+    spawnBoss(layout);
+    EventLog.showQuick('逼宫决战', '伪帝赵祯 · 击溃方可登基！', 'demote');
   }
 
   function countMinions() {
@@ -389,11 +421,12 @@ const CoronationBattle = (() => {
       if (u) allies.push(u);
     });
     spawnAcc = 0.55;
-    EventLog.showQuick('八轮对战', '敌我分批入场！敌360援130，我方略逊一筹', 'promote');
+    EventLog.showQuick('八轮对战', '敌强我弱，分批对垒！破阵后直抵逼宫', 'demote');
   }
 
   function skipToBossPhase(layout) {
-    phase = 'boss';
+    phase = 'boss_bridge';
+    bossBridgeT = 0.05;
     officialSpawned = OFFICIAL_TOTAL;
     minionSpawned = MINION_TOTAL;
     allySpawned = ALLY_TARGET;
@@ -401,7 +434,6 @@ const CoronationBattle = (() => {
     waveIdx = WAVE_SIZES.length - 1;
     enemies = [];
     bullets = bullets.filter((b) => b.side !== 'enemy');
-    spawnBoss(layout);
   }
 
   function isActive() {
@@ -509,13 +541,6 @@ const CoronationBattle = (() => {
       if (spawnedThisTick > 0) syncAllyReinforcements(layout);
       if (wavePause > 0) break;
     }
-  }
-
-  function beginBossPhase(layout) {
-    phase = 'boss';
-    bullets = bullets.filter((b) => b.side !== 'enemy');
-    spawnBoss(layout);
-    EventLog.showQuick('八轮已破', '逼宫决战！击溃伪帝登基！', 'demote');
   }
 
   function updateEnemyMotion(e, player, layout, dt) {
@@ -634,6 +659,9 @@ const CoronationBattle = (() => {
       if (spawnCountTotal() >= TOTAL && enemies.length === 0) {
         beginBossPhase(layout);
       }
+    } else if (phase === 'boss_bridge') {
+      bossBridgeT -= dt;
+      if (bossBridgeT <= 0) finalizeBossPhase(layout);
     }
 
     enemies.forEach((e) => {
@@ -659,11 +687,11 @@ const CoronationBattle = (() => {
       a.pulse = (a.pulse || 0) + dt * 4;
       const target = nearestEnemy(a);
       if (target) {
-        const steer = Math.sign(target.x - a.x) * (a.named ? 46 : 34);
+        const steer = Math.sign(target.x - a.x) * (a.named ? 36 : 24);
         a.vx = steer;
         const toY = target.y - a.y;
-        const chase = a.named ? 0.18 : 0.14;
-        a.vy = -ALLY_DRIFT * 0.15 + Math.sign(toY) * Math.min(Math.abs(toY) * chase, 52);
+        const chase = a.named ? 0.14 : 0.1;
+        a.vy = -ALLY_DRIFT * 0.12 + Math.sign(toY) * Math.min(Math.abs(toY) * chase, 42);
       } else if (a.entering) {
         a.vy = -ALLY_DRIFT * 0.55;
         a.vx *= 0.9;
@@ -676,7 +704,7 @@ const CoronationBattle = (() => {
       clampUnit(a, layout);
       a.fireCd -= dt;
       if (a.fireCd > 0) return;
-      a.fireCd = 2.1 + Math.random() * 1.4;
+      a.fireCd = 2.8 + Math.random() * 1.8;
       const foe = nearestEnemy(a);
       if (!foe) return;
       spawnBall(a.x, a.y - 4, foe.x, foe.y, ALLY_BULLET_SPEED, 'ally');
@@ -789,7 +817,8 @@ const CoronationBattle = (() => {
       fireReady: playerFireCd <= 0,
       bossHits: boss ? boss.hits : 0,
       bossMaxHits: BOSS_MAX_HITS,
-      bossActive: !!boss
+      bossActive: !!boss,
+      bossBridgeT: phase === 'boss_bridge' ? bossBridgeT : 0
     };
   }
 
@@ -810,9 +839,13 @@ const CoronationBattle = (() => {
     return phase === 'boss';
   }
 
+  function isBossBridgePhase() {
+    return phase === 'boss_bridge';
+  }
+
   return {
     reset, start, tick, isActive, tryPlayerFire, skipToBossPhase,
-    getPhase, isWavePhase, isBossPhase,
+    getPhase, isWavePhase, isBossPhase, isBossBridgePhase,
     getAllies, getEnemies, getBullets, getDrops, getHud,
     PLAYER_FIRE_CD, PLAYER_MAX_HITS
   };

@@ -424,9 +424,11 @@ const Game = (() => {
   function formatTenureLeft() {
     if (Coronation.isActive()) {
       const hud = CoronationBattle.getHud();
-      if (CoronationBattle.isBossPhase()) {
+      if (CoronationBattle.isBossPhase() || CoronationBattle.isBossBridgePhase()) {
         const boss = hud.bossActive;
-        return boss ? `帝${(hud.bossMaxHits || 16) - (hud.bossHits || 0)}` : '…';
+        if (boss) return `帝${(hud.bossMaxHits || 16) - (hud.bossHits || 0)}`;
+        if (CoronationBattle.isBossBridgePhase()) return '伪帝';
+        return '…';
       }
       return `敌${hud.enemiesLeft}`;
     }
