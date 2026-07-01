@@ -309,7 +309,8 @@ const Spawner = (() => {
   function enterCoronationMode() {
     coronationMode = true;
     coronationRobe = null;
-    pickups = pickups.filter((p) => p.color === 'blue');
+    obstacles = [];
+    pickups = [];
     coins = [];
     merits = [];
     amnesties = [];
@@ -422,7 +423,6 @@ const Spawner = (() => {
     timer += dt;
 
     if (coronationMode) {
-      tickCoronationHell(dt, layout, speed);
       return;
     }
 

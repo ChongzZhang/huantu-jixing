@@ -1,9 +1,43 @@
-/* 宦途疾行 · 输入 — 鼠标/触屏二维跟随 */
+/* 宦途疾行 · 输入 — 鼠标/触屏二维跟随 + 键盘四向 */
 const Input = (() => {
   let mouseX = 0;
   let mouseY = 0;
   let active = false;
   let touchMode = false;
+  const keys = { up: false, down: false, left: false, right: false };
+
+  function setKey(code, down) {
+    switch (code) {
+      case 'ArrowUp':
+      case 'KeyW':
+        keys.up = down;
+        break;
+      case 'ArrowDown':
+      case 'KeyS':
+        keys.down = down;
+        break;
+      case 'ArrowLeft':
+      case 'KeyA':
+        keys.left = down;
+        break;
+      case 'ArrowRight':
+      case 'KeyD':
+        keys.right = down;
+        break;
+      default:
+        break;
+    }
+  }
+
+  function getMoveVector() {
+    let x = 0;
+    let y = 0;
+    if (keys.left) x -= 1;
+    if (keys.right) x += 1;
+    if (keys.up) y -= 1;
+    if (keys.down) y += 1;
+    return { x, y };
+  }
 
   function isTouchDevice() {
     return touchMode || (typeof window !== 'undefined' && (
@@ -58,12 +92,24 @@ const Input = (() => {
     };
     document.addEventListener('touchmove', blockScroll, { passive: false });
 
+    window.addEventListener('keydown', (e) => {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(e.code)) {
+        e.preventDefault();
+        setKey(e.code, true);
+      }
+    });
+    window.addEventListener('keyup', (e) => setKey(e.code, false));
+    window.addEventListener('blur', () => {
+      keys.up = keys.down = keys.left = keys.right = false;
+    });
+
     return {
       getPos: () => ({ x: mouseX, y: mouseY }),
       getX: () => mouseX,
       getY: () => mouseY,
       isActive: () => active,
       isTouchDevice,
+      getMoveVector,
       setDefault: (x, y) => {
         if (!active) {
           mouseX = x;

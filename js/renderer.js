@@ -415,10 +415,12 @@ const Renderer = (() => {
     });
   }
 
-  function drawNpc(ctx, npc) {
+  function drawNpc(ctx, npc, battleRole) {
     const c = npc.robe || '#5a6a7a';
     const knock = npc.state === 'knockfly';
-    const isRival = npc.rival;
+    const isRival = npc.rival && !battleRole;
+    const isEnemy = battleRole === 'enemy';
+    const isAlly = battleRole === 'ally';
     const alpha = (knock ? 0.88 : 0.92) * (npc.fade ?? 1);
     if (npc.state === 'respawn') return;
 
@@ -474,6 +476,29 @@ const Renderer = (() => {
       ctx.beginPath();
       ctx.arc(0, 0, npc.w * 0.58, 0, Math.PI * 2);
       ctx.stroke();
+    }
+
+    if (isEnemy) {
+      ctx.strokeStyle = 'rgba(180,40,40,0.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, npc.w * 0.62, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    if (isAlly) {
+      ctx.strokeStyle = 'rgba(50,120,160,0.8)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, npc.w * 0.58, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    if (battleRole && npc.hits > 0) {
+      ctx.fillStyle = '#e8c040';
+      for (let i = 0; i < npc.hits; i++) {
+        ctx.beginPath();
+        ctx.arc(-npc.w * 0.2 + i * 8, -npc.h * 0.55, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
     ctx.restore();
@@ -587,10 +612,17 @@ const Renderer = (() => {
     ctx.fillText('黄袍', robe.x, cy + r * 0.42);
   }
 
-  function drawCoronationBanner(ctx, layout, phaseLeft) {
-    const sec = Math.max(0, Math.ceil(phaseLeft));
+  function drawCoronationBanner(ctx, layout, hud) {
+    const meta = hud || {};
     const w = layout.playAreaW;
     const y = layout.hudH + layout.laneHeaderH + 6;
+    const wave = meta.wave || 1;
+    const hits = meta.playerHits || 0;
+    const max = meta.playerMaxHits || 3;
+    const allies = meta.alliesLeft || 0;
+    const enemies = meta.enemiesLeft || 0;
+    const spawnTxt = meta.spawnDone ? '' : ` · 来${meta.spawned}/${meta.total}`;
+    const fireTxt = meta.fireReady ? ' · 可击' : '';
     ctx.save();
     ctx.fillStyle = 'rgba(90, 20, 20, 0.82)';
     roundRect(ctx, 8, y, w - 16, 28, 4);
@@ -599,10 +631,14 @@ const Renderer = (() => {
     ctx.lineWidth = 1.5;
     ctx.stroke();
     ctx.fillStyle = '#ffe8a0';
-    ctx.font = 'bold 14px KaiTi, serif';
+    ctx.font = 'bold 13px KaiTi, serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`黄袍乱局 · 撑住 ${sec} 秒即登基`, w / 2, y + 14);
+    ctx.fillText(
+      `逼宫战 · 第${wave}波 · 敌${enemies}${spawnTxt} · 命${max - hits}/${max} · 友${allies}${fireTxt}`,
+      w / 2,
+      y + 14
+    );
     ctx.restore();
   }
 
@@ -753,6 +789,57 @@ const Renderer = (() => {
       ctx.lineTo(p.x, p.y);
       ctx.stroke();
     }
+  }
+
+  function drawBattleBullet(ctx, p) {
+    const r = p.r;
+    const pulse = 0.88 + Math.sin(p.pulse || 0) * 0.12;
+    const rr = r * pulse;
+    const isEnemy = p.side === 'enemy';
+    const g = ctx.createRadialGradient(p.x - 2, p.y - 3, 1, p.x, p.y, rr + 2);
+    if (isEnemy) {
+      g.addColorStop(0, '#ffd8d8');
+      g.addColorStop(0.45, '#d03030');
+      g.addColorStop(1, '#6a0a0a');
+    } else {
+      g.addColorStop(0, '#ffe8c8');
+      g.addColorStop(0.45, '#e87830');
+      g.addColorStop(1, '#8a4010');
+    }
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, rr, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = isEnemy ? '#4a0808' : '#6a3010';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = '#fff8f0';
+    ctx.font = `bold ${Math.max(10, rr * 0.95)}px KaiTi, serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('兵', p.x, p.y);
+  }
+
+  function drawLightDrop(ctx, d) {
+    const bob = Math.sin(d.pulse || 0) * 3;
+    const r = d.r;
+    const g = ctx.createRadialGradient(d.x - 3, d.y + bob - 4, 1, d.x, d.y + bob, r + 4);
+    g.addColorStop(0, '#fffce8');
+    g.addColorStop(0.35, '#ffe878');
+    g.addColorStop(0.7, '#f0c030');
+    g.addColorStop(1, 'rgba(200,140,20,0.2)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(d.x, d.y + bob, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#c89820';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = '#6a4808';
+    ctx.font = `bold ${Math.max(11, r * 0.85)}px KaiTi, serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('光', d.x, d.y + bob);
   }
 
   function drawRankPanel(ctx, panelX, panelW, h, ranks, meta) {
@@ -1055,7 +1142,7 @@ const Renderer = (() => {
   return {
     COLORS, aabb, setLayout, drawPaperTexture, drawPlayChrome, drawHud, drawLaneHeaders,
     drawLanes, drawPlayer, drawNpc, drawAmnesty, drawObstacle, drawSpecial, drawCoronationRobe, drawCoronationBanner,
-    drawPickup, drawCoin, drawMerit, drawImpeachBall,
+    drawPickup, drawCoin, drawMerit, drawImpeachBall, drawBattleBullet, drawLightDrop,
     drawRankPanel, drawRankPanelBottom, drawToast, drawAmbientBanner, drawOverlay, LANE_NAMES
   };
 })();

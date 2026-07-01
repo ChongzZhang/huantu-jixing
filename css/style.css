@@ -636,6 +636,27 @@ input[type="text"] {
   color: var(--ink-mid);
 }
 
+.btn-test {
+  margin-top: 8px;
+  font-size: 0.95rem;
+}
+
+.hint-test {
+  margin-top: 10px;
+  font-size: 0.82rem;
+  color: var(--ink-light);
+  opacity: 0.85;
+}
+
+.hint-test code {
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 0.9em;
+  color: var(--ink-mid);
+  background: rgba(0, 0, 0, 0.05);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
 .hint {
   margin-top: 20px;
   font-size: 1rem;

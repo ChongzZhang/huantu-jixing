@@ -92,6 +92,10 @@ const Game = (() => {
       e.preventDefault();
       showCodex();
     });
+    document.getElementById('btn-test-battle')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      tryCoronationTest();
+    });
     document.getElementById('btn-retry')?.addEventListener('click', (e) => {
       e.preventDefault();
       phase = 'menu';
@@ -218,6 +222,10 @@ const Game = (() => {
     showScreen('menu');
     setPhaseClass();
     requestAnimationFrame(loop);
+
+    if (parseTestMode()) {
+      startCoronationTest();
+    }
   }
 
   function resize() {
@@ -253,12 +261,81 @@ const Game = (() => {
     startGame();
   }
 
+  function enterCoronationBattle() {
+    Coronation.startChallenge();
+    Spawner.enterCoronationMode();
+    CoronationBattle.start(layout, Npcs.getList(), Rivals.getList());
+    Npcs.reset();
+    Rivals.reset();
+  }
+
+  function startCoronationTest() {
+    if (!ready) {
+      showLoadError('数据加载中，请稍候再试…');
+      return false;
+    }
+    const nameInput = document.getElementById('player-name');
+    playerName = (nameInput?.value || '沈砚青').trim() || '沈砚青';
+    const diffEl = document.getElementById('difficulty');
+    Difficulty.set(diffEl?.value || 'normal');
+
+    Ranks.reset();
+    Spawner.reset();
+    Npcs.reset();
+    Rivals.reset();
+    Coronation.reset();
+    CoronationBattle.reset();
+    Impeachment.reset();
+    EventLog.reset();
+    sessionNpcKnockouts = 0;
+    Npcs.setOnKnockout(registerNpcKnockout);
+    Rivals.setOnKnockout(registerNpcKnockout);
+    timeLeft = GAME_DURATION;
+    endResult = null;
+    paused = false;
+    Tutorial.end();
+    document.getElementById('screen-pause')?.classList.add('hidden');
+    input.resetActive();
+    player = Player.create(
+      layout,
+      layout.playTop + layout.playHeight - 56
+    );
+    input.setDefault(player.x, player.y);
+    Ranks.setGrandWin();
+    Npcs.seed(layout);
+    Rivals.seed(layout);
+    phase = 'play';
+    showScreen('hud');
+    document.getElementById('screen-menu')?.classList.add('hidden');
+    setPhaseClass();
+    enterCoronationBattle();
+    EventLog.showQuick('测试模式', '直抵逼宫战 · 击退三波敌兵', 'promote');
+    return true;
+  }
+
+  function tryCoronationTest() {
+    if (!ready) {
+      const el = document.getElementById('load-hint');
+      if (el) el.textContent = loadError || '数据加载中，请稍候…';
+      return;
+    }
+    startCoronationTest();
+  }
+
+  function parseTestMode() {
+    const q = new URLSearchParams(window.location.search);
+    const v = (q.get('test') || '').toLowerCase();
+    if (v === 'coronation' || v === 'battle' || v === '终局') return 'coronation';
+    return null;
+  }
+
   function startGame() {
     Ranks.reset();
     Spawner.reset();
     Npcs.reset();
     Rivals.reset();
     Coronation.reset();
+    CoronationBattle.reset();
     Impeachment.reset();
     EventLog.reset();
     sessionNpcKnockouts = 0;
@@ -322,8 +399,8 @@ const Game = (() => {
 
   function formatTenureLeft() {
     if (Coronation.isActive()) {
-      const sec = Math.max(0, Math.ceil(Coronation.getPhaseLeft()));
-      return `${sec}秒`;
+      const hud = CoronationBattle.getHud();
+      return `敌${hud.enemiesLeft}`;
     }
     const sec = Math.max(0, Math.ceil(timeLeft));
     const m = Math.floor(sec / 60);
@@ -339,7 +416,7 @@ const Game = (() => {
   }
 
   function tenureHudLabel() {
-    return Coronation.isActive() ? '逼宫余' : '任期余';
+    return Coronation.isActive() ? '敌兵余' : '任期余';
   }
 
   function tryOfferCoronation() {
@@ -363,13 +440,12 @@ const Game = (() => {
     };
     if (!Renderer.aabb(pb, box)) return;
     Spawner.removeCoronationRobe();
-    Coronation.startChallenge();
-    Spawner.enterCoronationMode();
-    EventLog.showQuick('黄袍加身', '三十秒乱局！撑住即登基！', 'promote');
+    enterCoronationBattle();
+    EventLog.showQuick('黄袍加身', '同僚归心！击退三波敌兵即登基！', 'promote');
   }
 
   function resolveEndOutcome(type, reason) {
-    if (Coronation.isActive() && type === 'fail') {
+    if (Coronation.isPicked() && type === 'fail') {
       return { type: 'traitor', reason: '乱臣贼子' };
     }
     if (type === 'time' && Ranks.isGrandWin() && !Coronation.isPicked()) {
@@ -730,6 +806,9 @@ const Game = (() => {
     const y = e.clientY - rect.top;
 
     const inPlay = layout.mode === 'bottom' ? y <= layout.panelY : x <= layout.panelX;
+    if (inPlay && Coronation.isActive()) {
+      if (CoronationBattle.tryPlayerFire(player, x, y)) return;
+    }
     if (inPlay && Impeachment.tryPlayerFire(player, Rivals.getList(), Npcs.getList())) {
       return;
     }
@@ -743,14 +822,27 @@ const Game = (() => {
   function update(dt) {
     if (phase !== 'play' || paused || Tutorial.isActive()) return;
 
-    if (Coronation.isActive()) {
-      if (Coronation.tick(dt)) {
+    const inBattle = Coronation.isActive();
+
+    if (inBattle) {
+      const battleResult = CoronationBattle.tick(dt, layout, player, input);
+      if (battleResult === 'win') {
+        Coronation.endChallenge();
         endGame('emperor', '登基称帝');
         return;
       }
+      if (battleResult === 'lose') {
+        Coronation.endChallenge();
+        endGame('fail', '乱臣贼子');
+        return;
+      }
+      Ranks.tick(dt);
+      EventLog.tick(dt, 1, layout.mode === 'bottom' ? 0 : layout.panelX,
+        layout.mode === 'bottom' ? layout.playAreaW : layout.panelW);
+      return;
     }
 
-    const progress = Coronation.isActive() ? 1 : getProgress();
+    const progress = getProgress();
     const speed = getSpeed();
     player.distance += speed * dt;
 
@@ -831,21 +923,29 @@ const Game = (() => {
     Renderer.drawLaneHeaders(ctx, layout);
     Renderer.drawLanes(ctx, layout, layout.playHeight);
 
-    Spawner.getObstacles().forEach((o) => Renderer.drawObstacle(ctx, o));
-    Spawner.getSpecials().forEach((s) => Renderer.drawSpecial(ctx, s));
-    Npcs.getList().forEach((npc) => Renderer.drawNpc(ctx, npc));
-    Rivals.getList().forEach((r) => Renderer.drawNpc(ctx, r));
-    Spawner.getAmnesties().forEach((a) => Renderer.drawAmnesty(ctx, a));
-    Spawner.getCoins().forEach((c) => Renderer.drawCoin(ctx, c));
-    Spawner.getMerits().forEach((m) => Renderer.drawMerit(ctx, m));
-    Spawner.getPickups().forEach((p) => Renderer.drawPickup(ctx, p));
-    const robe = Spawner.getCoronationRobe();
-    if (robe) Renderer.drawCoronationRobe(ctx, robe);
-    Impeachment.getProjectiles().forEach((b) => Renderer.drawImpeachBall(ctx, b));
+    if (Coronation.isActive()) {
+      CoronationBattle.getAllies().forEach((npc) => Renderer.drawNpc(ctx, npc, 'ally'));
+      CoronationBattle.getEnemies().forEach((npc) => Renderer.drawNpc(ctx, npc, 'enemy'));
+      CoronationBattle.getDrops().forEach((d) => Renderer.drawLightDrop(ctx, d));
+      CoronationBattle.getBullets().forEach((b) => Renderer.drawBattleBullet(ctx, b));
+    } else {
+      Spawner.getObstacles().forEach((o) => Renderer.drawObstacle(ctx, o));
+      Spawner.getSpecials().forEach((s) => Renderer.drawSpecial(ctx, s));
+      Npcs.getList().forEach((npc) => Renderer.drawNpc(ctx, npc));
+      Rivals.getList().forEach((r) => Renderer.drawNpc(ctx, r));
+      Spawner.getAmnesties().forEach((a) => Renderer.drawAmnesty(ctx, a));
+      Spawner.getCoins().forEach((c) => Renderer.drawCoin(ctx, c));
+      Spawner.getMerits().forEach((m) => Renderer.drawMerit(ctx, m));
+      Spawner.getPickups().forEach((p) => Renderer.drawPickup(ctx, p));
+      const robe = Spawner.getCoronationRobe();
+      if (robe) Renderer.drawCoronationRobe(ctx, robe);
+      Impeachment.getProjectiles().forEach((b) => Renderer.drawImpeachBall(ctx, b));
+    }
+
     Renderer.drawPlayer(ctx, player);
 
     if (Coronation.isActive()) {
-      Renderer.drawCoronationBanner(ctx, layout, Coronation.getPhaseLeft());
+      Renderer.drawCoronationBanner(ctx, layout, CoronationBattle.getHud());
     }
 
     const tenureMeta = {
@@ -896,7 +996,7 @@ const Game = (() => {
     requestAnimationFrame(loop);
   }
 
-  return { init, tryStart };
+  return { init, tryStart, tryCoronationTest };
 })();
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -90,6 +90,13 @@ const Ranks = (() => {
     });
   }
 
+  /** 测试用：四线顶格 */
+  function setGrandWin() {
+    TRACKS.forEach((t) => {
+      idx[t] = ladder.winIndex[t];
+    });
+  }
+
   /** 四线中当前最高阶的一路（同阶优先本官） */
   function highestRankTrack() {
     const order = ['benguan', 'sanjie', 'xun', 'jue'];
@@ -197,7 +204,7 @@ const Ranks = (() => {
   }
 
   return {
-    load, reset, promote, demote, demoteHighest, highestRankTrack, applyPickup, benguanLevel,
+    load, reset, promote, demote, demoteHighest, highestRankTrack, setGrandWin, applyPickup, benguanLevel,
     isGrandWin, getState, tick, snapshot, resolveRank, getCareerPath, TRACKS, LABELS,
     lowestPromotableTrack, randomPromotableTrack, nextPromotableTrack,
     getCoinThreshold, getMeritThreshold, getCoinProgress
