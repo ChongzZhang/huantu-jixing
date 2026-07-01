@@ -149,7 +149,20 @@ const Renderer = (() => {
       ctx.fillText(`免死金牌 ${amnestyLeft.toFixed(0)}s`, pad, compact ? 56 : 62);
     }
 
-    drawMiniLegend(ctx, pad, amnestyLeft > 0 ? (compact ? u(72) : u(84)) : (compact ? u(62) : u(74)), w - pad * 2);
+    const legendY = amnestyLeft > 0 ? (compact ? u(72) : u(84)) : (compact ? u(62) : u(74));
+    drawMiniLegend(ctx, pad, legendY, w - pad * 2);
+
+    if (state.hellMode) {
+      ctx.font = `bold ${u(10)}px KaiTi, serif`;
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = state.impeachReady ? COLORS.redDark : COLORS.inkLight;
+      const msg = state.impeachReady
+        ? '弹劾可击·点屏'
+        : `弹劾${Math.ceil(state.impeachLeft || 0)}s`;
+      ctx.fillText(msg, w - pad, legendY);
+    }
+
     ctx.restore();
   }
 
@@ -705,6 +718,43 @@ const Renderer = (() => {
     ctx.fillText('功', m.x, m.y);
   }
 
+  function drawImpeachBall(ctx, p) {
+    const r = p.r;
+    const pulse = 0.88 + Math.sin(p.pulse || 0) * 0.12;
+    const rr = r * pulse;
+    const isPlayer = p.side === 'player';
+    const g = ctx.createRadialGradient(p.x - 2, p.y - 3, 1, p.x, p.y, rr + 2);
+    if (isPlayer) {
+      g.addColorStop(0, '#ffe0e0');
+      g.addColorStop(0.45, '#e84848');
+      g.addColorStop(1, '#8a1414');
+    } else {
+      g.addColorStop(0, '#ffd0d0');
+      g.addColorStop(0.45, '#d03838');
+      g.addColorStop(1, '#6a0a0a');
+    }
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, rr, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = isPlayer ? '#fff6f6' : '#4a0808';
+    ctx.lineWidth = isPlayer ? 2 : 1.5;
+    ctx.stroke();
+    ctx.fillStyle = '#fff8f8';
+    ctx.font = `bold ${Math.max(10, rr * 0.95)}px KaiTi, serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('弹', p.x, p.y);
+    if (isPlayer) {
+      ctx.strokeStyle = 'rgba(255,200,200,0.45)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(p.x - p.vx * 0.04, p.y - p.vy * 0.04);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    }
+  }
+
   function drawRankPanel(ctx, panelX, panelW, h, ranks, meta) {
     const pad = u(8);
     const innerW = panelW - pad * 2;
@@ -1005,7 +1055,7 @@ const Renderer = (() => {
   return {
     COLORS, aabb, setLayout, drawPaperTexture, drawPlayChrome, drawHud, drawLaneHeaders,
     drawLanes, drawPlayer, drawNpc, drawAmnesty, drawObstacle, drawSpecial, drawCoronationRobe, drawCoronationBanner,
-    drawPickup, drawCoin, drawMerit,
+    drawPickup, drawCoin, drawMerit, drawImpeachBall,
     drawRankPanel, drawRankPanelBottom, drawToast, drawAmbientBanner, drawOverlay, LANE_NAMES
   };
 })();

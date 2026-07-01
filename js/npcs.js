@@ -322,5 +322,5 @@ const Npcs = (() => {
     return list;
   }
 
-  return { reset, seed, tick, getList, hitbox, setOnKnockout };
+  return { reset, seed, tick, getList, hitbox, setOnKnockout, knockOut: launchKnockfly };
 })();

@@ -63,7 +63,8 @@ const Rivals = (() => {
       knockAge: 0,
       fade: 1,
       respawnCd: 0,
-      rival: true
+      rival: true,
+      impeachCd: 6 + slot * 5
     };
   }
 
@@ -180,6 +181,7 @@ const Rivals = (() => {
     rival.x = pos.x;
     rival.y = pos.y;
     rival.grabCd = 0.45;
+    rival.impeachCd = 6 + rival.slot * 5;
     clampPos(rival, layout);
   }
 
@@ -290,6 +292,6 @@ const Rivals = (() => {
   }
 
   return {
-    reset, seed, tick, getList, getActiveCount, setOnKnockout, hitbox
+    reset, seed, tick, getList, getActiveCount, setOnKnockout, hitbox, knockOut: launchKnockfly
   };
 })();

@@ -18,6 +18,12 @@ const Difficulty = (() => {
       label: '严苛',
       npcSpeedMult: 0.76,
       rivalSpeedMult: 1.04
+    },
+    hell: {
+      id: 'hell',
+      label: '地狱',
+      npcSpeedMult: 0.88,
+      rivalSpeedMult: 1.12
     }
   };
 
@@ -60,8 +66,12 @@ const Difficulty = (() => {
     rival.moveSpeed = rivalSpeed(rival.slot);
   }
 
+  function isHell() {
+    return current === 'hell';
+  }
+
   return {
-    set, get, LEVELS,
+    set, get, LEVELS, isHell,
     rivalSpeed, npcSpeed, npcSpeedFromRoll,
     applyNpcSpeed, applyRivalSpeed
   };

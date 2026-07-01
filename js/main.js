@@ -81,6 +81,9 @@ const Game = (() => {
 
   function bindUi() {
     Tutorial.bind();
+    const diffEl = document.getElementById('difficulty');
+    diffEl?.addEventListener('change', updateDifficultyHint);
+    updateDifficultyHint();
     document.getElementById('btn-start')?.addEventListener('click', (e) => {
       e.preventDefault();
       tryStart();
@@ -120,6 +123,16 @@ const Game = (() => {
         if (phase === 'play') togglePause(!paused);
       }
     });
+  }
+
+  function updateDifficultyHint() {
+    const el = document.querySelector('.hint-mouse');
+    if (!el) return;
+    const diff = document.getElementById('difficulty')?.value || 'normal';
+    const base = '鼠标跟随 · 碰触拾取（奏章同） · P 暂停';
+    el.textContent = diff === 'hell'
+      ? `${base} · 地狱：点玩法区发射弹劾弹（15s）`
+      : base;
   }
 
   function registerNpcKnockout() {
@@ -246,6 +259,7 @@ const Game = (() => {
     Npcs.reset();
     Rivals.reset();
     Coronation.reset();
+    Impeachment.reset();
     EventLog.reset();
     sessionNpcKnockouts = 0;
     Npcs.setOnKnockout(registerNpcKnockout);
@@ -688,11 +702,37 @@ const Game = (() => {
     document.getElementById('modal-codex').classList.remove('hidden');
   }
 
+  function handlePlayerImpeachHit() {
+    const res = Ranks.demoteHighest(1);
+    const track = res.track;
+    const label = track ? Ranks.LABELS[track] : '官阶';
+    if (!res.ok) {
+      if (tryUseAmnesty('弹劾')) return;
+      endGame('fail', res.reason);
+      return;
+    }
+    if (res.noop) {
+      EventLog.showQuick('弹劾中招', '无官可贬', 'demote');
+      return;
+    }
+    const st = track ? Ranks.getState().find((s) => s.track === track) : null;
+    EventLog.showQuick(
+      '弹劾中招',
+      `${label}贬一阶${st ? ' · ' + st.current.name : ''}`,
+      'demote'
+    );
+  }
+
   function onCanvasClick(e) {
     if (phase !== 'play' || paused || Tutorial.isActive()) return;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+
+    const inPlay = layout.mode === 'bottom' ? y <= layout.panelY : x <= layout.panelX;
+    if (inPlay && Impeachment.tryPlayerFire(player, Rivals.getList(), Npcs.getList())) {
+      return;
+    }
 
     if (layout.mode === 'bottom' ? y > layout.panelY : x > layout.panelX) {
       const codex = EventLog.getCodex();
@@ -740,6 +780,13 @@ const Game = (() => {
     Npcs.tick(dt, layout, player, speed, progress, spawnerState, aiPeers);
     Rivals.tick(dt, layout, spawnerState, aiPeers);
 
+    const badPickups = Spawner.getPickups().filter((p) => p.color === 'blue');
+    Impeachment.tick(
+      dt, layout, player,
+      Rivals.getList(), Npcs.getList(), badPickups,
+      handlePlayerImpeachHit
+    );
+
     tryOfferCoronation();
 
     if (!Coronation.isActive()) {
@@ -776,7 +823,10 @@ const Game = (() => {
       meritNeed: Ranks.getMeritThreshold(),
       safety: player.safety,
       integrity: player.integrity,
-      amnestyLeft: player.amnestyLeft || 0
+      amnestyLeft: player.amnestyLeft || 0,
+      hellMode: Difficulty.isHell(),
+      impeachReady: Impeachment.isPlayerReady(),
+      impeachLeft: Impeachment.getPlayerCdLeft()
     }, layout);
     Renderer.drawLaneHeaders(ctx, layout);
     Renderer.drawLanes(ctx, layout, layout.playHeight);
@@ -791,6 +841,7 @@ const Game = (() => {
     Spawner.getPickups().forEach((p) => Renderer.drawPickup(ctx, p));
     const robe = Spawner.getCoronationRobe();
     if (robe) Renderer.drawCoronationRobe(ctx, robe);
+    Impeachment.getProjectiles().forEach((b) => Renderer.drawImpeachBall(ctx, b));
     Renderer.drawPlayer(ctx, player);
 
     if (Coronation.isActive()) {

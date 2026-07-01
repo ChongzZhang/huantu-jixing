@@ -90,6 +90,29 @@ const Ranks = (() => {
     });
   }
 
+  /** 四线中当前最高阶的一路（同阶优先本官） */
+  function highestRankTrack() {
+    const order = ['benguan', 'sanjie', 'xun', 'jue'];
+    let best = null;
+    let bestIdx = -1;
+    for (const t of order) {
+      const i = idx[t];
+      if (i < 0) continue;
+      if (i > bestIdx) {
+        bestIdx = i;
+        best = t;
+      }
+    }
+    return best;
+  }
+
+  function demoteHighest(steps = 1) {
+    const track = highestRankTrack();
+    if (!track) return { ok: true, noop: true, track: null };
+    const res = demote(track, steps);
+    return { ...res, track };
+  }
+
   /** 功劳满：升当前最低的一路官职 */
   function lowestPromotableTrack() {
     let best = null;
@@ -174,7 +197,7 @@ const Ranks = (() => {
   }
 
   return {
-    load, reset, promote, demote, applyPickup, benguanLevel,
+    load, reset, promote, demote, demoteHighest, highestRankTrack, applyPickup, benguanLevel,
     isGrandWin, getState, tick, snapshot, resolveRank, getCareerPath, TRACKS, LABELS,
     lowestPromotableTrack, randomPromotableTrack, nextPromotableTrack,
     getCoinThreshold, getMeritThreshold, getCoinProgress
