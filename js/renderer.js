@@ -739,7 +739,7 @@ const Renderer = (() => {
     const hits = meta.playerHits || 0;
     const max = meta.playerMaxHits || 3;
     const allies = meta.alliesLeft || 0;
-    const allyCap = meta.allyTarget || 100;
+    const allyCap = meta.allyTarget || 118;
     const allyIn = meta.allySpawned ?? allies;
     let line;
     if (meta.phase === 'boss_bridge') {
@@ -762,7 +762,8 @@ const Renderer = (() => {
       line = `八轮${meta.wave}/${meta.waveTotal || 8}波${spawnTxt}${allyTxt} · 场${enemies} · 命${max - hits}/${max} · 自动`;
     }
     ctx.save();
-    ctx.fillStyle = meta.bossActive ? 'rgba(70, 10, 10, 0.9)' : 'rgba(90, 20, 20, 0.82)';
+    ctx.fillStyle = (meta.bossActive || meta.phase === 'boss_bridge')
+      ? 'rgba(70, 10, 10, 0.9)' : 'rgba(90, 20, 20, 0.82)';
     roundRect(ctx, 8, y, w - 16, 28, 4);
     ctx.fill();
     ctx.strokeStyle = '#ffd700';
