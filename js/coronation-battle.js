@@ -1,8 +1,17 @@
 /* 宦途疾行 · 黄袍加身终局 — 飞机大战式逼宫战 */
 const CoronationBattle = (() => {
-  const TOTAL = 50;
+  const TOTAL = 100;
   const SPAWN_INTERVAL = 1;
-  const WAVE_SIZES = [17, 17, 16];
+  const WAVE_SIZES = [25, 25, 25, 25];
+  const WAVE_BREAKS = (() => {
+    const out = [];
+    let acc = 0;
+    for (let i = 0; i < WAVE_SIZES.length - 1; i++) {
+      acc += WAVE_SIZES[i];
+      out.push(acc);
+    }
+    return out;
+  })();
   const WAVE_PAUSE = 2.5;
   const BALL_R = 12;
   const PLAYER_FIRE_CD = 0.3;
@@ -10,7 +19,9 @@ const CoronationBattle = (() => {
   const ALLY_BULLET_SPEED = 420;
   const ENEMY_BULLET_SPEED = 200;
   const BOSS_BULLET_SPEED = 225;
-  const PLAYER_MOVE_SPEED = 240;
+  const PLAYER_MOVE_SPEED = 340;
+  const TOUCH_LERP = 22;
+  const TOUCH_DEADZONE = 5;
   const ENEMY_DRIFT = 78;
   const MINION_DRIFT = 92;
   const ALLY_DRIFT = 28;
@@ -29,8 +40,14 @@ const CoronationBattle = (() => {
   const ENEMY_FIRE_MIN = 1.4;
   const ENEMY_FIRE_MAX = 2.6;
 
-  const SURNAMES = ['辽', '西夏', '吐蕃', '大理', '回鹘', '契丹', '女真', '蒙古', '金', '夏'];
-  const GIVEN = ['先锋', '偏将', '都尉', '校尉', '弓手', '铁骑', '伏兵', '斥候', '牙将', '统制'];
+  const HIGH_RANKS = [
+    '宰相', '枢密使', '参政知事', '尚书令', '侍中', '同平章事',
+    '太保', '太傅', '太尉', '节度使', '宣徽使', '枢相',
+    '知枢密院', '中书令', '尚书右丞', '翰林承旨', '副枢密使', '参知政事'
+  ];
+  const FOE_SURNAMES = ['韩', '富', '吕', '晏', '欧阳', '范', '包', '曾', '蔡', '庞', '文', '种'];
+  const FOE_GIVEN1 = ['彦', '子', '夷', '元', '公', '君', '仲', '文', '正', '德', '师'];
+  const FOE_GIVEN2 = ['博', '坚', '简', '殊', '修', '弼', '拯', '巩', '京', '卞', '通'];
 
   let active = false;
   let phase = 'waves';
@@ -64,10 +81,13 @@ const CoronationBattle = (() => {
     bossIntroLeft = 0;
   }
 
-  function randomEnemyName() {
-    const a = SURNAMES[Math.floor(Math.random() * SURNAMES.length)];
-    const b = GIVEN[Math.floor(Math.random() * GIVEN.length)];
-    return a + b;
+  function randomFoeIdentity() {
+    const rankTitle = HIGH_RANKS[Math.floor(Math.random() * HIGH_RANKS.length)];
+    const sn = FOE_SURNAMES[Math.floor(Math.random() * FOE_SURNAMES.length)];
+    const g1 = FOE_GIVEN1[Math.floor(Math.random() * FOE_GIVEN1.length)];
+    const g2 = FOE_GIVEN2[Math.floor(Math.random() * FOE_GIVEN2.length)];
+    const name = sn + g1 + g2;
+    return { rankTitle, name };
   }
 
   function adoptUnit(src, side) {
@@ -96,12 +116,14 @@ const CoronationBattle = (() => {
     const size = Lanes.fitSize(layout, 24, 30);
     const margin = size.w / 2 + 6;
     const span = Math.max(20, layout.trackWidth - margin * 2);
+    const id = randomFoeIdentity();
     const x = xHint != null
       ? Math.max(layout.trackLeft + margin, Math.min(layout.trackLeft + layout.trackWidth - margin, xHint + (Math.random() - 0.5) * 50))
       : layout.trackLeft + margin + Math.random() * span;
     return {
       id: 'minion_' + Date.now() + Math.random(),
-      name: randomEnemyName(),
+      rankTitle: id.rankTitle,
+      name: id.name,
       x,
       y: layout.playTop + 12,
       w: size.w,
@@ -124,9 +146,11 @@ const CoronationBattle = (() => {
     const size = Lanes.fitSize(layout, 26, 32);
     const margin = size.w / 2 + 6;
     const span = Math.max(20, layout.trackWidth - margin * 2);
+    const id = randomFoeIdentity();
     enemies.push({
       id: 'foe_' + spawnCount,
-      name: randomEnemyName(),
+      rankTitle: id.rankTitle,
+      name: id.name,
       x: layout.trackLeft + margin + Math.random() * span,
       y: layout.playTop + 18,
       w: size.w,
@@ -150,7 +174,8 @@ const CoronationBattle = (() => {
     const cx = layout.trackLeft + layout.trackWidth / 2;
     enemies.push({
       id: 'emperor_boss',
-      name: '伪帝',
+      rankTitle: '伪帝',
+      name: '赵祯',
       isBoss: true,
       x: cx,
       y: layout.playTop + 52,
@@ -190,7 +215,16 @@ const CoronationBattle = (() => {
       if (u) allies.push(u);
     });
     spawnAcc = 0.4;
-    EventLog.showQuick('黄袍加身', '同僚归心！三波敌尽，伪帝现身！', 'promote');
+    EventLog.showQuick('黄袍加身', '同僚归心！四波敌尽，伪帝现身！', 'promote');
+  }
+
+  function skipToBossPhase() {
+    phase = 'boss_intro';
+    bossIntroLeft = 1.2;
+    spawnCount = TOTAL;
+    waveIdx = WAVE_SIZES.length - 1;
+    enemies = enemies.filter((e) => e.isBoss);
+    bullets = bullets.filter((b) => b.side !== 'enemy');
   }
 
   function isActive() {
@@ -269,7 +303,7 @@ const CoronationBattle = (() => {
     while (spawnAcc >= SPAWN_INTERVAL && spawnCount < TOTAL) {
       spawnAcc -= SPAWN_INTERVAL;
       spawnWaveEnemy(layout);
-      if (spawnCount === WAVE_SIZES[0] || spawnCount === WAVE_SIZES[0] + WAVE_SIZES[1]) {
+      if (WAVE_BREAKS.includes(spawnCount)) {
         waveIdx += 1;
         wavePause = WAVE_PAUSE;
         if (waveIdx < WAVE_SIZES.length) {
@@ -284,7 +318,7 @@ const CoronationBattle = (() => {
     phase = 'boss_intro';
     bossIntroLeft = BOSS_INTRO_SEC;
     bullets = bullets.filter((b) => b.side !== 'enemy');
-    EventLog.showQuick('三波已破', '伪帝亲征！死党云集！', 'demote');
+    EventLog.showQuick('四波已破', '伪帝亲征！死党云集！', 'demote');
   }
 
   function updateEnemyMotion(e, player, layout, dt) {
@@ -367,28 +401,30 @@ const CoronationBattle = (() => {
     if (player.invincible > 0) player.invincible -= dt;
 
     const mv = input.getMoveVector();
-    let dx = mv.x;
-    let dy = mv.y;
-    if (dx === 0 && dy === 0 && input.isActive()) {
+    let moved = false;
+    if (mv.x !== 0 || mv.y !== 0) {
+      const len = Math.hypot(mv.x, mv.y) || 1;
+      const spd = PLAYER_MOVE_SPEED * dt;
+      const p = Player.clampPos(
+        player, layout,
+        player.x + (mv.x / len) * spd,
+        player.y + (mv.y / len) * spd
+      );
+      player.x = p.x;
+      player.y = p.y;
+      moved = true;
+    }
+    if (!moved && input.isActive()) {
       const pos = input.getPos();
       const tx = pos.x - player.x;
       const ty = pos.y - player.y;
       const d = Math.hypot(tx, ty);
-      if (d > 14) {
-        dx = tx / d;
-        dy = ty / d;
+      if (d > TOUCH_DEADZONE) {
+        const lerp = Math.min(1, dt * TOUCH_LERP);
+        const target = Player.clampPos(player, layout, pos.x, pos.y);
+        player.x += (target.x - player.x) * lerp;
+        player.y += (target.y - player.y) * lerp;
       }
-    }
-    if (dx !== 0 || dy !== 0) {
-      const len = Math.hypot(dx, dy) || 1;
-      const spd = PLAYER_MOVE_SPEED * dt;
-      const p = Player.clampPos(
-        player, layout,
-        player.x + (dx / len) * spd,
-        player.y + (dy / len) * spd
-      );
-      player.x = p.x;
-      player.y = p.y;
     }
 
     if (phase === 'boss_intro') {
@@ -528,7 +564,8 @@ const CoronationBattle = (() => {
     const boss = getBoss();
     return {
       phase,
-      wave: phase === 'boss' || phase === 'boss_intro' ? 0 : waveIdx + 1,
+      wave: phase === 'boss' || phase === 'boss_intro' ? 0 : Math.min(waveIdx + 1, WAVE_SIZES.length),
+      waveTotal: WAVE_SIZES.length,
       enemiesLeft: enemies.length,
       spawnDone: spawnCount >= TOTAL,
       spawned: spawnCount,
@@ -552,7 +589,7 @@ const CoronationBattle = (() => {
   function getDrops() { return drops; }
 
   return {
-    reset, start, tick, isActive, tryPlayerFire,
+    reset, start, tick, isActive, tryPlayerFire, skipToBossPhase,
     getAllies, getEnemies, getBullets, getDrops, getHud,
     PLAYER_FIRE_CD, PLAYER_MAX_HITS
   };

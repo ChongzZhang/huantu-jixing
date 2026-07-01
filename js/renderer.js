@@ -281,6 +281,7 @@ const Renderer = (() => {
       beltColor, accent,
       mini = false,
       name = '',
+      rankTitle = '',
       pulse = 0,
       alpha = 1
     } = opts;
@@ -371,7 +372,28 @@ const Renderer = (() => {
       ctx.fill();
     }
 
-    if (name) {
+    if (rankTitle && name) {
+      const tw = u(78);
+      const th = u(30);
+      const tx = x - tw / 2;
+      const ty = headY - headR * (mini ? 1.45 : 1.55);
+      ctx.fillStyle = 'rgba(248,242,228,0.94)';
+      roundRect(ctx, tx, ty, tw, th, 3);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(59,47,30,0.35)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#6a1818';
+      ctx.font = `bold ${u(9)}px KaiTi, STKaiti, serif`;
+      const rank = rankTitle.length > 5 ? rankTitle.slice(0, 5) : rankTitle;
+      ctx.fillText(rank, x, ty + u(10));
+      ctx.fillStyle = COLORS.inkMid;
+      ctx.font = `${u(10)}px KaiTi, STKaiti, serif`;
+      const nm = name.length > 4 ? name.slice(0, 4) : name;
+      ctx.fillText(nm, x, ty + u(22));
+    } else if (name) {
       ctx.font = `${u(11)}px KaiTi, STKaiti, serif`;
       const tw = Math.min(u(72), Math.max(u(40), ctx.measureText(name).width + u(12)));
       const th = u(16);
@@ -505,7 +527,8 @@ const Renderer = (() => {
       beltColor: isBoss ? '#ffd700' : (isRival ? COLORS.goldLight : '#c8b888'),
       accent: isBoss ? '#ffd700' : (isRival ? COLORS.gold : null),
       mini: !isBoss,
-      name: knock ? '' : (isBoss ? '伪帝' : npc.name),
+      rankTitle: knock ? '' : ((isEnemy || npc.isMinion || isBoss) ? (npc.rankTitle || '') : ''),
+      name: knock ? '' : (npc.name || ''),
       pulse: npc.pulse || 0,
       alpha
     });
@@ -675,7 +698,7 @@ const Renderer = (() => {
       const wave = meta.wave || 1;
       const enemies = meta.enemiesLeft || 0;
       const spawnTxt = meta.spawnDone ? '' : ` · 来${meta.spawned}/${meta.total}`;
-      line = `逼宫战 · 第${wave}波 · 敌${enemies}${spawnTxt} · 命${max - hits}/${max} · 友${allies}${fireTxt}`;
+      line = `逼宫战 · 第${meta.wave}/${meta.waveTotal || 4}波 · 敌${enemies}${spawnTxt} · 命${max - hits}/${max} · 友${allies}${fireTxt}`;
     }
     ctx.save();
     ctx.fillStyle = meta.bossActive ? 'rgba(70, 10, 10, 0.9)' : 'rgba(90, 20, 20, 0.82)';

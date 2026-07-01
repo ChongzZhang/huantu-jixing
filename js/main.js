@@ -94,7 +94,11 @@ const Game = (() => {
     });
     document.getElementById('btn-test-battle')?.addEventListener('click', (e) => {
       e.preventDefault();
-      tryCoronationTest();
+      tryCoronationTest(false);
+    });
+    document.getElementById('btn-test-boss')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      tryCoronationTest(true);
     });
     document.getElementById('btn-retry')?.addEventListener('click', (e) => {
       e.preventDefault();
@@ -223,9 +227,9 @@ const Game = (() => {
     setPhaseClass();
     requestAnimationFrame(loop);
 
-    if (parseTestMode()) {
-      startCoronationTest();
-    }
+    const testMode = parseTestMode();
+    if (testMode === 'coronation') startCoronationTest();
+    if (testMode === 'boss') startCoronationTest({ skipToBoss: true });
   }
 
   function resize() {
@@ -269,7 +273,7 @@ const Game = (() => {
     Rivals.reset();
   }
 
-  function startCoronationTest() {
+  function startCoronationTest(options = {}) {
     if (!ready) {
       showLoadError('数据加载中，请稍候再试…');
       return false;
@@ -309,22 +313,28 @@ const Game = (() => {
     document.getElementById('screen-menu')?.classList.add('hidden');
     setPhaseClass();
     enterCoronationBattle();
-    EventLog.showQuick('测试模式', '直抵逼宫战 · 击退三波敌兵', 'promote');
+    if (options.skipToBoss) {
+      CoronationBattle.skipToBossPhase();
+      EventLog.showQuick('测试模式', '直抵伪帝决战 · 殿陛 Boss', 'promote');
+    } else {
+      EventLog.showQuick('测试模式', '直抵逼宫战 · 四波百敌后伪帝', 'promote');
+    }
     return true;
   }
 
-  function tryCoronationTest() {
+  function tryCoronationTest(skipToBoss = false) {
     if (!ready) {
       const el = document.getElementById('load-hint');
       if (el) el.textContent = loadError || '数据加载中，请稍候…';
       return;
     }
-    startCoronationTest();
+    startCoronationTest({ skipToBoss });
   }
 
   function parseTestMode() {
     const q = new URLSearchParams(window.location.search);
     const v = (q.get('test') || '').toLowerCase();
+    if (v === 'boss' || v === '伪帝' || v === 'emperor') return 'boss';
     if (v === 'coronation' || v === 'battle' || v === '终局') return 'coronation';
     return null;
   }
