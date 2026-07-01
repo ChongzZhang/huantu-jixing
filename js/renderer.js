@@ -400,9 +400,37 @@ const Renderer = (() => {
     ctx.restore();
   }
 
-  function drawPlayer(ctx, p) {
+  function drawBattleHpBar(ctx, x, y, w, h, hits, maxHits, variant) {
+    const hp = Math.max(0, maxHits - hits);
+    const pct = maxHits > 0 ? hp / maxHits : 0;
+    const barW = Math.max(w, 28);
+    const barH = 4;
+    const bx = x - barW / 2;
+    const by = y - h / 2 - 9;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    roundRect(ctx, bx, by, barW, barH, 2);
+    ctx.fill();
+    const fill = variant === 'enemy' ? '#c83838'
+      : variant === 'ally' ? '#3a88b8' : '#d8a820';
+    ctx.fillStyle = fill;
+    roundRect(ctx, bx, by, barW * pct, barH, 2);
+    ctx.fill();
+    if (pct <= 0.34) {
+      ctx.strokeStyle = 'rgba(255,80,80,0.8)';
+      ctx.lineWidth = 1;
+      roundRect(ctx, bx, by, barW, barH, 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawPlayer(ctx, p, battleHp) {
     const { x, y, w, h, invincible } = p;
     const flash = invincible > 0 && Math.floor(invincible * 10) % 2 === 0;
+    if (battleHp) {
+      drawBattleHpBar(ctx, x, y, w, h, battleHp.hits, battleHp.maxHits, 'player');
+    }
     drawOfficial(ctx, {
       x, y, w, h,
       robeTop: '#d45050',
@@ -423,6 +451,14 @@ const Renderer = (() => {
     const isAlly = battleRole === 'ally';
     const alpha = (knock ? 0.88 : 0.92) * (npc.fade ?? 1);
     if (npc.state === 'respawn') return;
+
+    const showBattleHp = battleRole && npc.maxHits != null;
+    if (showBattleHp) {
+      drawBattleHpBar(
+        ctx, npc.x, npc.y, npc.w, npc.h,
+        npc.hits || 0, npc.maxHits, battleRole
+      );
+    }
 
     ctx.save();
     if (knock && npc.knockFlash > 0) {
@@ -491,14 +527,6 @@ const Renderer = (() => {
       ctx.beginPath();
       ctx.arc(0, 0, npc.w * 0.58, 0, Math.PI * 2);
       ctx.stroke();
-    }
-    if (battleRole && npc.hits > 0) {
-      ctx.fillStyle = '#e8c040';
-      for (let i = 0; i < npc.hits; i++) {
-        ctx.beginPath();
-        ctx.arc(-npc.w * 0.2 + i * 8, -npc.h * 0.55, 3, 0, Math.PI * 2);
-        ctx.fill();
-      }
     }
 
     ctx.restore();

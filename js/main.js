@@ -807,7 +807,7 @@ const Game = (() => {
 
     const inPlay = layout.mode === 'bottom' ? y <= layout.panelY : x <= layout.panelX;
     if (inPlay && Coronation.isActive()) {
-      if (CoronationBattle.tryPlayerFire(player, x, y)) return;
+      if (CoronationBattle.tryPlayerFire(player)) return;
     }
     if (inPlay && Impeachment.tryPlayerFire(player, Rivals.getList(), Npcs.getList())) {
       return;
@@ -942,7 +942,7 @@ const Game = (() => {
       Impeachment.getProjectiles().forEach((b) => Renderer.drawImpeachBall(ctx, b));
     }
 
-    Renderer.drawPlayer(ctx, player);
+    Renderer.drawPlayer(ctx, player, Coronation.isActive() ? CoronationBattle.getHud() : null);
 
     if (Coronation.isActive()) {
       Renderer.drawCoronationBanner(ctx, layout, CoronationBattle.getHud());

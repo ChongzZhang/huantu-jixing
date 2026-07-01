@@ -59,7 +59,7 @@ const CoronationBattle = (() => {
   }
 
   function adoptUnit(src, side) {
-    if (!src || src.state === 'knockfly' || src.fade < 0.15) return null;
+    if (!src || src.state === 'knockfly' || (src.fade ?? 1) < 0.15) return null;
     return {
       id: src.id || ('ally_' + Math.random()),
       name: src.name,
@@ -139,9 +139,11 @@ const CoronationBattle = (() => {
     });
   }
 
-  function tryPlayerFire(player, aimX, aimY) {
+  function tryPlayerFire(player) {
     if (!active || playerFireCd > 0) return false;
-    spawnBall(player.x, player.y - 6, aimX, aimY, PLAYER_BULLET_SPEED, 'player');
+    const target = nearestEnemy(player);
+    if (!target) return false;
+    spawnBall(player.x, player.y - 6, target.x, target.y, PLAYER_BULLET_SPEED, 'player');
     playerFireCd = PLAYER_FIRE_CD;
     return true;
   }
@@ -216,6 +218,39 @@ const CoronationBattle = (() => {
     }
   }
 
+  function updateEnemyMotion(e, player, layout, dt) {
+    const density = Math.min(1, spawnCount / TOTAL);
+    const cluster = 0.45 + density * 1.1;
+
+    const toPx = player.x - e.x;
+    const steerCap = 55 + density * 65;
+    const steerX = Math.sign(toPx) * Math.min(Math.abs(toPx), steerCap);
+    e.vx = e.vx * 0.86 + steerX * dt * (1.4 + density * 2.2);
+
+    let avgX = 0;
+    let avgY = 0;
+    let near = 0;
+    enemies.forEach((o) => {
+      if (o === e) return;
+      const d = Math.hypot(o.x - e.x, o.y - e.y);
+      if (d > 72 || d < 4) return;
+      avgX += o.x;
+      avgY += o.y;
+      near += 1;
+    });
+    if (near > 0) {
+      avgX /= near;
+      avgY /= near;
+      e.vx += (avgX - e.x) * (0.14 + density * 0.22) * dt;
+      e.y += (avgY - e.y) * (0.06 + density * 0.1) * dt;
+    }
+
+    e.vy = ENEMY_DRIFT * (0.75 + density * 0.55);
+    e.x += e.vx * dt;
+    e.y += e.vy * dt;
+    clampUnit(e, layout);
+  }
+
   function tick(dt, layout, player, input) {
     if (!active) return null;
 
@@ -252,13 +287,11 @@ const CoronationBattle = (() => {
 
     enemies.forEach((e) => {
       e.pulse = (e.pulse || 0) + dt * 4;
-      e.x += e.vx * dt;
-      e.y += e.vy * dt;
-      clampUnit(e, layout);
+      updateEnemyMotion(e, player, layout, dt);
       e.fireCd -= dt;
       if (e.fireCd > 0) return;
       e.fireCd = ENEMY_FIRE_MIN + Math.random() * (ENEMY_FIRE_MAX - ENEMY_FIRE_MIN);
-      const tx = player.x + (Math.random() - 0.5) * 24;
+      const tx = player.x + (Math.random() - 0.5) * 16;
       const ty = player.y;
       spawnBall(e.x, e.y + e.h / 2, tx, ty, ENEMY_BULLET_SPEED, 'enemy');
     });
@@ -307,7 +340,8 @@ const CoronationBattle = (() => {
           if (Renderer.aabb(pb, br)) {
             playerHits += 1;
             hitFlash = HIT_IFRAME;
-            if (playerHits >= PLAYER_MAX_HITS) return false;
+            player.invincible = Math.max(player.invincible || 0, HIT_IFRAME);
+            return false;
           }
         }
         for (let i = 0; i < allies.length; i++) {
@@ -368,6 +402,8 @@ const CoronationBattle = (() => {
       total: TOTAL,
       playerHits,
       playerMaxHits: PLAYER_MAX_HITS,
+      hits: playerHits,
+      maxHits: PLAYER_MAX_HITS,
       alliesLeft: allies.length,
       fireReady: playerFireCd <= 0
     };
