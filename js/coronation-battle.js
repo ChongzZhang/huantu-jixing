@@ -3,9 +3,9 @@ const CoronationBattle = (() => {
   const OFFICIAL_TOTAL = 200;
   const MINION_TOTAL = 160;
   const TOTAL = OFFICIAL_TOTAL + MINION_TOTAL;
-  const ALLY_TARGET = 188;
+  const ALLY_TARGET = 140;
   const ALLY_PACE = 0.84;
-  const ALLY_WAVE_SIZES = [24, 24, 24, 23, 23, 24, 23, 23];
+  const ALLY_WAVE_SIZES = [18, 18, 18, 17, 17, 18, 17, 17];
   const ALLY_GRUNT_MAX_HITS = 1;
   const ALLY_OFFICIAL_MAX_HITS = 2;
   const BASE_SPAWN_INTERVAL = 0.66;
