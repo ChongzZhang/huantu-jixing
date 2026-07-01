@@ -1,9 +1,12 @@
 /* 宦途疾行 · 黄袍加身终局 — 飞机大战式逼宫战 */
 const CoronationBattle = (() => {
   const TOTAL = 100;
-  const SPAWN_INTERVAL = 0.5;
-  const SPAWN_BATCH = 3;
+  const BASE_SPAWN_INTERVAL = 0.52;
+  const BASE_SPAWN_BATCH = 2;
   const WAVE_SIZES = [25, 25, 25, 25];
+  /** 四轮对战：波次越高，刷怪越快、射速越快 */
+  const WAVE_SPAWN_MULT = [1, 1.38, 1.78, 2.25];
+  const WAVE_FIRE_MULT = [1, 1.28, 1.58, 1.95];
   const WAVE_BREAKS = (() => {
     const out = [];
     let acc = 0;
@@ -42,7 +45,23 @@ const CoronationBattle = (() => {
   const BOSS_INTRO_SEC = 2.2;
 
   function rollEnemyFireCd() {
-    return ENEMY_FIRE_MIN + Math.random() * (ENEMY_FIRE_MAX - ENEMY_FIRE_MIN);
+    const w = combatWaveIndex();
+    const min = (1.4 / ENEMY_FIRE_RATE) / WAVE_FIRE_MULT[w];
+    const max = (2.6 / ENEMY_FIRE_RATE) / WAVE_FIRE_MULT[w];
+    return min + Math.random() * (max - min);
+  }
+
+  function combatWaveIndex() {
+    if (phase !== 'waves') return WAVE_SIZES.length - 1;
+    return Math.min(waveIdx, WAVE_SIZES.length - 1);
+  }
+
+  function spawnIntervalForWave() {
+    return BASE_SPAWN_INTERVAL / WAVE_SPAWN_MULT[combatWaveIndex()];
+  }
+
+  function spawnBatchForWave() {
+    return Math.min(7, BASE_SPAWN_BATCH + combatWaveIndex() + 1);
   }
 
   const HIGH_RANKS = [
@@ -220,7 +239,7 @@ const CoronationBattle = (() => {
       if (u) allies.push(u);
     });
     spawnAcc = 0.4;
-    EventLog.showQuick('黄袍加身', '同僚归心！四波敌尽，伪帝现身！', 'promote');
+    EventLog.showQuick('四轮对战', '敌军来袭！四波尽破，方入逼宫！', 'demote');
   }
 
   function skipToBossPhase() {
@@ -305,16 +324,21 @@ const CoronationBattle = (() => {
       return;
     }
     spawnAcc += dt;
-    while (spawnAcc >= SPAWN_INTERVAL && spawnCount < TOTAL) {
-      spawnAcc -= SPAWN_INTERVAL;
-      const batch = Math.min(SPAWN_BATCH, TOTAL - spawnCount);
+    const interval = spawnIntervalForWave();
+    while (spawnAcc >= interval && spawnCount < TOTAL) {
+      spawnAcc -= interval;
+      const batch = Math.min(spawnBatchForWave(), TOTAL - spawnCount);
       for (let i = 0; i < batch; i++) {
         spawnWaveEnemy(layout);
         if (WAVE_BREAKS.includes(spawnCount)) {
           waveIdx += 1;
           wavePause = WAVE_PAUSE;
           if (waveIdx < WAVE_SIZES.length) {
-            EventLog.showQuick('敌兵波次', `第 ${waveIdx + 1} 波将至……`, 'demote');
+            EventLog.showQuick(
+              '敌兵波次',
+              `第 ${waveIdx + 1} 波将至 · 愈急愈猛……`,
+              'demote'
+            );
           }
           break;
         }
@@ -327,7 +351,7 @@ const CoronationBattle = (() => {
     phase = 'boss_intro';
     bossIntroLeft = BOSS_INTRO_SEC;
     bullets = bullets.filter((b) => b.side !== 'enemy');
-    EventLog.showQuick('四波已破', '伪帝亲征！死党云集！', 'demote');
+    EventLog.showQuick('四轮已破', '逼宫决战！伪帝亲征！', 'demote');
   }
 
   function updateEnemyMotion(e, player, layout, dt) {
@@ -597,8 +621,21 @@ const CoronationBattle = (() => {
   function getBullets() { return bullets; }
   function getDrops() { return drops; }
 
+  function getPhase() {
+    return phase;
+  }
+
+  function isWavePhase() {
+    return phase === 'waves';
+  }
+
+  function isBossPhase() {
+    return phase === 'boss' || phase === 'boss_intro';
+  }
+
   return {
     reset, start, tick, isActive, tryPlayerFire, skipToBossPhase,
+    getPhase, isWavePhase, isBossPhase,
     getAllies, getEnemies, getBullets, getDrops, getHud,
     PLAYER_FIRE_CD, PLAYER_MAX_HITS
   };

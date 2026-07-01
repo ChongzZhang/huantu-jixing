@@ -424,6 +424,10 @@ const Game = (() => {
   function formatTenureLeft() {
     if (Coronation.isActive()) {
       const hud = CoronationBattle.getHud();
+      if (CoronationBattle.isBossPhase()) {
+        const boss = hud.bossActive;
+        return boss ? `帝${(hud.bossMaxHits || 16) - (hud.bossHits || 0)}` : '…';
+      }
       return `敌${hud.enemiesLeft}`;
     }
     const sec = Math.max(0, Math.ceil(timeLeft));
@@ -440,7 +444,9 @@ const Game = (() => {
   }
 
   function tenureHudLabel() {
-    return Coronation.isActive() ? '敌兵余' : '任期余';
+    if (!Coronation.isActive()) return '任期余';
+    if (CoronationBattle.isBossPhase()) return '逼宫余';
+    return '四轮余';
   }
 
   function tryOfferCoronation() {
@@ -465,7 +471,7 @@ const Game = (() => {
     if (!Renderer.aabb(pb, box)) return;
     Spawner.removeCoronationRobe();
     enterCoronationBattle();
-    EventLog.showQuick('黄袍加身', '同僚归心！击退三波敌兵即登基！', 'promote');
+    EventLog.showQuick('黄袍加身', '同僚归心！先破四轮，再逼宫登基！', 'promote');
   }
 
   function resolveEndOutcome(type, reason) {

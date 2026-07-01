@@ -719,15 +719,15 @@ const Renderer = (() => {
     let line;
     if (meta.phase === 'boss_intro') {
       const sec = Math.ceil(meta.bossIntroLeft || 0);
-      line = `伪帝驾临 · ${sec} 秒后决战${fireTxt}`;
+      line = `逼宫决战 · 伪帝驾临 ${sec}s${fireTxt}`;
     } else if (meta.phase === 'boss' || meta.bossActive) {
       const bh = (meta.bossMaxHits || 16) - (meta.bossHits || 0);
-      line = `殿陛决战 · 伪帝 ${bh}/${meta.bossMaxHits || 16} · 小怪${meta.enemiesLeft - 1} · 命${max - hits}/${max} · 友${allies}${fireTxt}`;
+      const minions = Math.max(0, (meta.enemiesLeft || 1) - 1);
+      line = `逼宫决战 · 伪帝 ${bh}/${meta.bossMaxHits || 16} · 小怪${minions} · 命${max - hits}/${max} · 友${allies}${fireTxt}`;
     } else {
-      const wave = meta.wave || 1;
       const enemies = meta.enemiesLeft || 0;
       const spawnTxt = meta.spawnDone ? '' : ` · 来${meta.spawned}/${meta.total}`;
-      line = `逼宫战 · 第${meta.wave}/${meta.waveTotal || 4}波 · 敌${enemies}${spawnTxt} · 命${max - hits}/${max} · 友${allies}${fireTxt}`;
+      line = `四轮对战 · 第${meta.wave}/${meta.waveTotal || 4}波 · 敌${enemies}${spawnTxt} · 命${max - hits}/${max} · 友${allies}${fireTxt}`;
     }
     ctx.save();
     ctx.fillStyle = meta.bossActive ? 'rgba(70, 10, 10, 0.9)' : 'rgba(90, 20, 20, 0.82)';
