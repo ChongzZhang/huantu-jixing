@@ -119,6 +119,10 @@ const Game = (() => {
       e.preventDefault();
       togglePause(false);
     });
+    document.getElementById('btn-quit')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      quitToMenu();
+    });
     window.addEventListener('keydown', (e) => {
       if (Tutorial.isActive()) {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -168,6 +172,16 @@ const Game = (() => {
     paused = on;
     const el = document.getElementById('screen-pause');
     if (el) el.classList.toggle('hidden', !paused);
+  }
+
+  function quitToMenu() {
+    paused = false;
+    phase = 'menu';
+    EventLog.closeDetail?.();
+    document.getElementById('screen-pause')?.classList.add('hidden');
+    showScreen('menu');
+    document.getElementById('screen-menu')?.classList.remove('hidden');
+    setPhaseClass();
   }
 
   function tryStart() {

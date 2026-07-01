@@ -222,6 +222,14 @@ body::before {
   margin-bottom: 20px;
 }
 
+.pause-panel .btn-primary {
+  margin-bottom: 10px;
+}
+
+.pause-panel .btn-secondary {
+  width: 100%;
+}
+
 .tutorial-screen {
   z-index: 35;
   cursor: pointer;
