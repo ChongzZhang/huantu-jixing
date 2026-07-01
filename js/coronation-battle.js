@@ -1,7 +1,8 @@
 /* 宦途疾行 · 黄袍加身终局 — 飞机大战式逼宫战 */
 const CoronationBattle = (() => {
   const TOTAL = 100;
-  const SPAWN_INTERVAL = 1;
+  const SPAWN_INTERVAL = 0.5;
+  const SPAWN_BATCH = 3;
   const WAVE_SIZES = [25, 25, 25, 25];
   const WAVE_BREAKS = (() => {
     const out = [];
@@ -31,14 +32,12 @@ const CoronationBattle = (() => {
   const LIGHT_DROP_CHANCE = 0.3;
   const LIGHT_INVINCIBLE = 10;
   const HIT_IFRAME = 0.55;
-  const BOSS_FIRE_MIN = 0.36;
-  const BOSS_FIRE_MAX = 0.58;
-  const BOSS_MINION_INTERVAL = 1.85;
-  const BOSS_MAX_MINIONS = 14;
-  const BOSS_INTRO_SEC = 2.2;
-
-  const ENEMY_FIRE_MIN = 1.4;
-  const ENEMY_FIRE_MAX = 2.6;
+  const ENEMY_FIRE_RATE = 1.2;
+  const ENEMY_FIRE_MIN = 1.4 / ENEMY_FIRE_RATE;
+  const ENEMY_FIRE_MAX = 2.6 / ENEMY_FIRE_RATE;
+  const BOSS_FIRE_MIN = 0.36 / ENEMY_FIRE_RATE;
+  const BOSS_FIRE_MAX = 0.58 / ENEMY_FIRE_RATE;
+  const BOSS_MINION_INTERVAL = 1.85 / ENEMY_FIRE_RATE;
 
   const HIGH_RANKS = [
     '宰相', '枢密使', '参政知事', '尚书令', '侍中', '同平章事',
@@ -135,7 +134,7 @@ const CoronationBattle = (() => {
       isMinion: true,
       hits: 0,
       maxHits: UNIT_MAX_HITS,
-      fireCd: 0.5 + Math.random() * 1,
+      fireCd: rollEnemyFireCd() * 0.55,
       vx: (Math.random() - 0.5) * 40,
       vy: MINION_DRIFT,
       battle: true
@@ -302,15 +301,19 @@ const CoronationBattle = (() => {
     spawnAcc += dt;
     while (spawnAcc >= SPAWN_INTERVAL && spawnCount < TOTAL) {
       spawnAcc -= SPAWN_INTERVAL;
-      spawnWaveEnemy(layout);
-      if (WAVE_BREAKS.includes(spawnCount)) {
-        waveIdx += 1;
-        wavePause = WAVE_PAUSE;
-        if (waveIdx < WAVE_SIZES.length) {
-          EventLog.showQuick('敌兵波次', `第 ${waveIdx + 1} 波将至……`, 'demote');
+      const batch = Math.min(SPAWN_BATCH, TOTAL - spawnCount);
+      for (let i = 0; i < batch; i++) {
+        spawnWaveEnemy(layout);
+        if (WAVE_BREAKS.includes(spawnCount)) {
+          waveIdx += 1;
+          wavePause = WAVE_PAUSE;
+          if (waveIdx < WAVE_SIZES.length) {
+            EventLog.showQuick('敌兵波次', `第 ${waveIdx + 1} 波将至……`, 'demote');
+          }
+          break;
         }
-        break;
       }
+      if (wavePause > 0) break;
     }
   }
 
@@ -453,7 +456,7 @@ const CoronationBattle = (() => {
       }
       e.fireCd -= dt;
       if (e.fireCd > 0) return;
-      e.fireCd = ENEMY_FIRE_MIN + Math.random() * (ENEMY_FIRE_MAX - ENEMY_FIRE_MIN);
+      e.fireCd = rollEnemyFireCd();
       const tx = player.x + (Math.random() - 0.5) * 16;
       const ty = player.y;
       spawnBall(e.x, e.y + e.h / 2, tx, ty, ENEMY_BULLET_SPEED, 'enemy');
