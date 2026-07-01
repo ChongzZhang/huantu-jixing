@@ -7,8 +7,8 @@ const SECONDS_PER_YEAR = 8; // 9.6÷1.2，年齿增速为上一版 1.2 倍
 const AGE_DEATH_START = 51;
 const AGE_DEATH_RAMP = 66;
 const PANEL_W = 340;
-const HUD_TOP = 142;
-const HUD_TOP_MOBILE = 108;
+const HUD_TOP = 158;
+const HUD_TOP_MOBILE = 118;
 
 const Game = (() => {
   let canvas, ctx, input;
@@ -46,7 +46,9 @@ const Game = (() => {
   }
 
   function layoutHudTop() {
-    return isMobileLayout() ? HUD_TOP_MOBILE : HUD_TOP;
+    const scale = isMobileLayout() ? 1.1 : Math.min(1.55, Math.max(1.3, cssW / 680));
+    const base = isMobileLayout() ? HUD_TOP_MOBILE : HUD_TOP;
+    return Math.round(base + Math.max(0, scale - 1) * 28);
   }
 
   function applyLayout() {
@@ -448,7 +450,8 @@ const Game = (() => {
   function tenureHudLabel() {
     if (!Coronation.isActive()) return '任期余';
     if (CoronationBattle.isBossPhase()) return '逼宫余';
-    return '四轮余';
+    if (CoronationBattle.isBossBridgePhase()) return '殿门';
+    return '八阵余';
   }
 
   function tryOfferCoronation() {

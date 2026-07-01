@@ -117,23 +117,25 @@ const Renderer = (() => {
     const pad = compact ? u(6) : u(12);
     const { playerName, age, coinBank, coinNeed, meritBank, meritNeed, safety, integrity, amnestyLeft } = state;
 
+    const titleY = u(6);
     ctx.font = `bold ${u(compact ? 15 : 19)}px KaiTi, STKaiti, serif`;
     ctx.fillStyle = COLORS.ink;
     ctx.textBaseline = 'top';
     ctx.textAlign = 'left';
-    ctx.fillText(`庆历 · ${playerName || '沈砚青'}`, pad, 6);
+    ctx.fillText(`庆历 · ${playerName || '沈砚青'}`, pad, titleY);
     ctx.font = `${u(compact ? 13 : 15)}px KaiTi, serif`;
     ctx.fillStyle = COLORS.inkMid;
     ctx.textAlign = 'right';
-    ctx.fillText(`年齿 ${age ?? 24} 岁`, w - pad, 8);
+    ctx.fillText(`年齿 ${age ?? 24} 岁`, w - pad, titleY + u(1));
 
-    const labelW = compact ? u(32) : u(38);
-    const barX = pad + labelW + (compact ? u(4) : u(8));
-    const barW = w - pad * 2 - labelW - (compact ? u(4) : u(8));
+    const labelW = compact ? u(40) : u(48);
+    const barX = pad + labelW + u(compact ? 6 : 10);
+    const barW = w - pad * 2 - labelW - u(compact ? 6 : 10);
     const halfW = (barW - 8) / 2;
-    const row1 = compact ? u(28) : u(32);
-    const row2 = compact ? u(46) : u(52);
     const barH = compact ? u(10) : u(13);
+    const rowGap = u(compact ? 10 : 12);
+    const row1 = titleY + u(compact ? 24 : 28) + u(4);
+    const row2 = row1 + barH + rowGap;
 
     const coinProg = coinNeed ? Math.min(1, coinBank / coinNeed) : 0;
     const meritProg = meritNeed ? Math.min(1, meritBank / meritNeed) : 0;
@@ -154,15 +156,16 @@ const Renderer = (() => {
     ctx.fillText(`${Math.round(safety ?? 0)}`, barX + halfW - 2, row2 + barH / 2);
     ctx.fillText(`${Math.round(integrity ?? 0)}`, w - pad, row2 + barH / 2);
 
+    let legendY = row2 + barH + u(compact ? 8 : 10);
     if (amnestyLeft > 0) {
       ctx.font = `bold ${u(12)}px KaiTi, serif`;
       ctx.fillStyle = '#8a6020';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      ctx.fillText(`免死金牌 ${amnestyLeft.toFixed(0)}s`, pad, compact ? 56 : 62);
+      ctx.fillText(`免死金牌 ${amnestyLeft.toFixed(0)}s`, pad, legendY);
+      legendY += u(16);
     }
 
-    const legendY = amnestyLeft > 0 ? (compact ? u(72) : u(84)) : (compact ? u(62) : u(74));
     drawMiniLegend(ctx, pad, legendY, w - pad * 2);
 
     if (state.hellMode) {
@@ -180,11 +183,11 @@ const Renderer = (() => {
   }
 
   function drawStatBar(ctx, padX, y, labelW, barX, barW, barH, label, pct, color) {
-    ctx.font = `bold ${u(14)}px KaiTi, serif`;
+    ctx.font = `bold ${u(13)}px KaiTi, serif`;
     ctx.fillStyle = COLORS.inkMid;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(label, padX, y + barH / 2);
+    ctx.fillText(label, padX, y + barH / 2, labelW);
 
     const p = Math.max(0, Math.min(1, pct));
     ctx.fillStyle = '#d5cdb8';
@@ -211,19 +214,22 @@ const Renderer = (() => {
       { c: '#9a6a8a', t: '功' },
       { c: '#e8d080', t: '免' }
     ];
-    const chipW = totalW / items.length;
+    const chip = u(13);
+    const gap = u(5);
+    const textW = u(12);
+    const itemW = Math.max(u(32), (totalW - gap * (items.length - 1)) / items.length);
     ctx.font = `${u(11)}px KaiTi, serif`;
     items.forEach((it, i) => {
-      const cx = x + i * chipW;
+      const cx = x + i * (itemW + gap);
       ctx.fillStyle = it.c;
-      roundRect(ctx, cx, y, u(13), u(13), 2);
+      roundRect(ctx, cx, y, chip, chip, 2);
       ctx.fill();
       ctx.strokeStyle = 'rgba(26,18,8,0.25)';
       ctx.stroke();
       ctx.fillStyle = COLORS.inkLight;
       ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText(it.t, cx + u(15), y + 1);
+      ctx.textBaseline = 'middle';
+      ctx.fillText(it.t, cx + chip + u(3), y + chip / 2, textW);
     });
   }
 
