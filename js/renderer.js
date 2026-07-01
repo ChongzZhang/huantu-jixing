@@ -538,7 +538,7 @@ const Renderer = (() => {
       }
     }
 
-    const showPlate = (isEnemy || npc.isMinion || isBoss || (isAlly && npc.named));
+    const showPlate = (isBoss || (isEnemy && !npc.isMinion) || (isAlly && npc.named));
     drawOfficial(ctx, {
       x: 0,
       y: 0,
@@ -549,7 +549,7 @@ const Renderer = (() => {
       robeBot: darken(c, isBoss ? 12 : 22),
       beltColor: isBoss ? '#ffd700' : (isRival ? COLORS.goldLight : '#c8b888'),
       accent: isBoss ? '#ffd700' : (isRival ? COLORS.gold : (isAlly && npc.named ? '#5ab0d8' : null)),
-      mini: isBoss ? false : (npc.reinforce && !npc.named),
+      mini: isBoss ? false : (isEnemy ? !!npc.isMinion : (npc.reinforce && !npc.named)),
       rankTitle: knock ? '' : (showPlate ? (npc.rankTitle || '') : ''),
       name: knock ? '' : ((npc.reinforce && !npc.named) ? '' : (npc.name || '')),
       pulse: npc.pulse || 0,
@@ -732,8 +732,14 @@ const Renderer = (() => {
       line = `逼宫决战 · 伪帝 ${bh}/${meta.bossMaxHits || 16} · 小怪${minions} · 命${max - hits}/${max} · 援${allies}/${allyCap} · 自动`;
     } else {
       const enemies = meta.enemiesLeft || 0;
-      const spawnTxt = meta.spawnDone ? '' : ` · 来${meta.spawned}/${meta.total}`;
-      line = `八轮对战 · 第${meta.wave}/${meta.waveTotal || 8}波${spawnTxt} · 敌${enemies} · 命${max - hits}/${max} · 援${allies}/${allyCap} · 自动`;
+      const oSpawn = meta.officialSpawned ?? 0;
+      const mSpawn = meta.minionSpawned ?? 0;
+      const oTotal = meta.officialTotal || 200;
+      const mTotal = meta.minionTotal || 160;
+      const spawnTxt = meta.spawnDone
+        ? ''
+        : ` · 官${oSpawn}/${oTotal}·兵${mSpawn}/${mTotal}`;
+      line = `八轮对战 · 第${meta.wave}/${meta.waveTotal || 8}波${spawnTxt} · 场${enemies} · 命${max - hits}/${max} · 援${allies}/${allyCap} · 自动`;
     }
     ctx.save();
     ctx.fillStyle = meta.bossActive ? 'rgba(70, 10, 10, 0.9)' : 'rgba(90, 20, 20, 0.82)';

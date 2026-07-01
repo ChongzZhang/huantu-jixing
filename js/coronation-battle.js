@@ -1,10 +1,14 @@
 /* 宦途疾行 · 黄袍加身终局 — 飞机大战式逼宫战 */
 const CoronationBattle = (() => {
-  const TOTAL = 360;
+  const OFFICIAL_TOTAL = 200;
+  const MINION_TOTAL = 160;
+  const TOTAL = OFFICIAL_TOTAL + MINION_TOTAL;
   const ALLY_TARGET = 130;
   const BASE_SPAWN_INTERVAL = 0.72;
   const BASE_SPAWN_BATCH = 3;
-  const WAVE_SIZES = [45, 45, 45, 45, 45, 45, 45, 45];
+  const WAVE_OFFICIAL_SIZES = [25, 25, 25, 25, 25, 25, 25, 25];
+  const WAVE_MINION_SIZES = [20, 20, 20, 20, 20, 20, 20, 20];
+  const WAVE_SIZES = WAVE_OFFICIAL_SIZES.map((n, i) => n + WAVE_MINION_SIZES[i]);
   /** 八轮对战：波次越高略加速（幅度收敛） */
   const WAVE_SPAWN_MULT = [1, 1.14, 1.26, 1.36, 1.44, 1.50, 1.55, 1.58];
   const WAVE_FIRE_MULT = [1, 1.10, 1.20, 1.28, 1.34, 1.38, 1.42, 1.45];
@@ -90,6 +94,8 @@ const CoronationBattle = (() => {
   let bullets = [];
   let drops = [];
   let spawnCount = 0;
+  let officialSpawned = 0;
+  let minionSpawned = 0;
   let spawnAcc = 0;
   let waveIdx = 0;
   let wavePause = 0;
@@ -105,6 +111,8 @@ const CoronationBattle = (() => {
     bullets = [];
     drops = [];
     spawnCount = 0;
+    officialSpawned = 0;
+    minionSpawned = 0;
     spawnAcc = 0;
     waveIdx = 0;
     wavePause = 0;
@@ -208,23 +216,47 @@ const CoronationBattle = (() => {
     };
   }
 
-  function makeMinion(layout, xHint) {
-    const size = Lanes.fitSize(layout, 24, 30);
+  function spawnCountTotal() {
+    return officialSpawned + minionSpawned;
+  }
+
+  function pickNextSpawnKind() {
+    const oLeft = OFFICIAL_TOTAL - officialSpawned;
+    const mLeft = MINION_TOTAL - minionSpawned;
+    if (oLeft <= 0) return 'grunt';
+    if (mLeft <= 0) return 'official';
+    const oRatio = officialSpawned / OFFICIAL_TOTAL;
+    const mRatio = minionSpawned / MINION_TOTAL;
+    if (mRatio < oRatio - 0.04) return 'grunt';
+    if (oRatio < mRatio - 0.04) return 'official';
+    return Math.random() < MINION_TOTAL / TOTAL ? 'grunt' : 'official';
+  }
+
+  function spawnPos(layout, size, yBias) {
     const margin = size.w / 2 + 6;
     const span = Math.max(20, layout.trackWidth - margin * 2);
-    const id = randomFoeIdentity();
+    return {
+      x: layout.trackLeft + margin + Math.random() * span,
+      y: layout.playTop + (yBias ?? 18)
+    };
+  }
+
+  function makeMinion(layout, xHint) {
+    const size = Lanes.fitSize(layout, 18, 22);
+    const margin = size.w / 2 + 6;
+    const span = Math.max(20, layout.trackWidth - margin * 2);
     const x = xHint != null
       ? Math.max(layout.trackLeft + margin, Math.min(layout.trackLeft + layout.trackWidth - margin, xHint + (Math.random() - 0.5) * 50))
       : layout.trackLeft + margin + Math.random() * span;
     return {
       id: 'minion_' + Date.now() + Math.random(),
-      rankTitle: id.rankTitle,
-      name: id.name,
+      rankTitle: '',
+      name: '',
       x,
       y: layout.playTop + 12,
       w: size.w,
       h: size.h,
-      robe: '#5a2020',
+      robe: '#4a1818',
       pulse: Math.random() * Math.PI * 2,
       state: 'active',
       side: 'enemy',
@@ -238,23 +270,24 @@ const CoronationBattle = (() => {
     };
   }
 
-  function spawnWaveEnemy(layout) {
+  function spawnWaveOfficial(layout) {
     const size = Lanes.fitSize(layout, 26, 32);
-    const margin = size.w / 2 + 6;
-    const span = Math.max(20, layout.trackWidth - margin * 2);
     const id = randomFoeIdentity();
+    const pos = spawnPos(layout, size, 18);
     enemies.push({
-      id: 'foe_' + spawnCount,
+      id: 'foe_' + officialSpawned,
       rankTitle: id.rankTitle,
       name: id.name,
-      x: layout.trackLeft + margin + Math.random() * span,
-      y: layout.playTop + 18,
+      named: true,
+      x: pos.x,
+      y: pos.y,
       w: size.w,
       h: size.h,
       robe: '#5a2020',
       pulse: Math.random() * Math.PI * 2,
       state: 'active',
       side: 'enemy',
+      isMinion: false,
       hits: 0,
       maxHits: UNIT_MAX_HITS,
       fireCd: rollEnemyFireCd() * 0.7,
@@ -262,7 +295,35 @@ const CoronationBattle = (() => {
       vy: ENEMY_DRIFT,
       battle: true
     });
-    spawnCount += 1;
+    officialSpawned += 1;
+    spawnCount = spawnCountTotal();
+  }
+
+  function spawnWaveGrunt(layout) {
+    const size = Lanes.fitSize(layout, 18, 22);
+    const pos = spawnPos(layout, size, 10 + Math.random() * 10);
+    enemies.push({
+      id: 'grunt_' + minionSpawned,
+      rankTitle: '',
+      name: '',
+      x: pos.x,
+      y: pos.y,
+      w: size.w,
+      h: size.h,
+      robe: '#4a1818',
+      pulse: Math.random() * Math.PI * 2,
+      state: 'active',
+      side: 'enemy',
+      isMinion: true,
+      hits: 0,
+      maxHits: UNIT_MAX_HITS,
+      fireCd: rollEnemyFireCd() * 0.9,
+      vx: (Math.random() - 0.5) * 48,
+      vy: MINION_DRIFT,
+      battle: true
+    });
+    minionSpawned += 1;
+    spawnCount = spawnCountTotal();
   }
 
   function spawnBoss(layout) {
@@ -312,11 +373,13 @@ const CoronationBattle = (() => {
     });
     fillReinforcements(layout);
     spawnAcc = 0.4;
-    EventLog.showQuick('八轮对战', `援军${allies.length}人集结！八波尽破，方入逼宫！`, 'promote');
+    EventLog.showQuick('八轮对战', `援军${allies.length}人集结！官${OFFICIAL_TOTAL}兵${MINION_TOTAL}逐步来犯！`, 'promote');
   }
 
   function skipToBossPhase(layout) {
     phase = 'boss';
+    officialSpawned = OFFICIAL_TOTAL;
+    minionSpawned = MINION_TOTAL;
     spawnCount = TOTAL;
     waveIdx = WAVE_SIZES.length - 1;
     enemies = [];
@@ -391,25 +454,27 @@ const CoronationBattle = (() => {
   }
 
   function trySpawnWaves(dt, layout) {
-    if (phase !== 'waves' || spawnCount >= TOTAL) return;
+    if (phase !== 'waves' || spawnCountTotal() >= TOTAL) return;
     if (wavePause > 0) {
       wavePause -= dt;
       return;
     }
     spawnAcc += dt;
     const interval = spawnIntervalForWave();
-    while (spawnAcc >= interval && spawnCount < TOTAL) {
+    while (spawnAcc >= interval && spawnCountTotal() < TOTAL) {
       spawnAcc -= interval;
-      const batch = Math.min(spawnBatchForWave(), TOTAL - spawnCount);
+      const batch = Math.min(spawnBatchForWave(), TOTAL - spawnCountTotal());
       for (let i = 0; i < batch; i++) {
-        spawnWaveEnemy(layout);
-        if (WAVE_BREAKS.includes(spawnCount)) {
+        const kind = pickNextSpawnKind();
+        if (kind === 'official') spawnWaveOfficial(layout);
+        else spawnWaveGrunt(layout);
+        if (WAVE_BREAKS.includes(spawnCountTotal())) {
           waveIdx += 1;
           wavePause = WAVE_PAUSE;
           if (waveIdx < WAVE_SIZES.length) {
             EventLog.showQuick(
               '敌兵波次',
-              `第 ${waveIdx + 1} 波将至 · 愈急愈猛……`,
+              `第 ${waveIdx + 1} 波将至 · 官兵混编来犯……`,
               'demote'
             );
           }
@@ -428,7 +493,7 @@ const CoronationBattle = (() => {
   }
 
   function updateEnemyMotion(e, player, layout, dt) {
-    const density = Math.min(1, spawnCount / TOTAL);
+    const density = Math.min(1, spawnCountTotal() / TOTAL);
     const toPx = player.x - e.x;
     const toPy = player.y - e.y;
     const steerCap = 70 + density * 80;
@@ -537,7 +602,7 @@ const CoronationBattle = (() => {
 
     if (phase === 'waves') {
       trySpawnWaves(dt, layout);
-      if (spawnCount >= TOTAL && enemies.length === 0) {
+      if (spawnCountTotal() >= TOTAL && enemies.length === 0) {
         beginBossPhase(layout);
       }
     }
@@ -548,7 +613,7 @@ const CoronationBattle = (() => {
         updateBoss(e, player, layout, dt);
         return;
       }
-      if (phase === 'boss') {
+      if (e.isMinion) {
         updateMinionMotion(e, player, layout, dt);
       } else {
         updateEnemyMotion(e, player, layout, dt);
@@ -673,9 +738,13 @@ const CoronationBattle = (() => {
       wave: phase === 'boss' ? 0 : Math.min(waveIdx + 1, WAVE_SIZES.length),
       waveTotal: WAVE_SIZES.length,
       enemiesLeft: enemies.length,
-      spawnDone: spawnCount >= TOTAL,
-      spawned: spawnCount,
+      spawnDone: spawnCountTotal() >= TOTAL,
+      spawned: spawnCountTotal(),
       total: TOTAL,
+      officialSpawned,
+      minionSpawned,
+      officialTotal: OFFICIAL_TOTAL,
+      minionTotal: MINION_TOTAL,
       playerHits,
       playerMaxHits: PLAYER_MAX_HITS,
       hits: playerHits,

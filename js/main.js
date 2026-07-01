@@ -331,7 +331,7 @@ const Game = (() => {
       CoronationBattle.skipToBossPhase(layout);
       EventLog.showQuick('测试模式', '直抵伪帝决战 · 殿陛 Boss', 'promote');
     } else {
-      EventLog.showQuick('测试模式', '直抵逼宫战 · 八波三百六十敌后伪帝', 'promote');
+      EventLog.showQuick('测试模式', '直抵逼宫战 · 官200兵160八波后伪帝', 'promote');
     }
     return true;
   }
