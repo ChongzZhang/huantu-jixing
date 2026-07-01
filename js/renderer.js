@@ -61,6 +61,19 @@ const Renderer = (() => {
     return s + '…';
   }
 
+  /** 在宽度内自适应字号：优先用大号，仅溢出时逐级缩小 */
+  function fitFontSize(ctx, text, maxW, preferPx, minPx, bold) {
+    const fam = 'KaiTi, STKaiti, serif';
+    const lo = Math.max(9, minPx);
+    const hi = Math.max(lo, preferPx);
+    for (let fs = hi; fs >= lo; fs--) {
+      ctx.font = `${bold ? 'bold ' : ''}${fs}px ${fam}`;
+      if (ctx.measureText(text).width <= maxW) return fs;
+    }
+    ctx.font = `${bold ? 'bold ' : ''}${lo}px ${fam}`;
+    return lo;
+  }
+
   function drawPaperTexture(ctx, w, h) {
     ctx.fillStyle = COLORS.paper;
     ctx.fillRect(0, 0, w, h);
@@ -789,18 +802,26 @@ const Renderer = (() => {
     ctx.fill();
     ctx.stroke();
 
-    const fs = Math.max(u(13), Math.min(u(18), w * 0.22));
+    const padX = 5;
+    const innerW = w - padX * 2;
+    const line2 = (p.coinValue || p.meritValue) ? effect : (steps === 0 ? (p.brief || '无变动') : effect);
+    const titleRaw = p.name || '';
+    const preferTitle = Math.min(u(15), w * 0.24, h * 0.3);
+    const preferSub = Math.min(u(14), w * 0.22, h * 0.26);
+    const minFs = Math.max(9, u(10));
+
+    const titleFs = fitFontSize(ctx, titleRaw, innerW, preferTitle, minFs, true);
     ctx.fillStyle = '#fff';
-    ctx.font = `bold ${fs}px KaiTi, serif`;
+    ctx.font = `bold ${titleFs}px KaiTi, STKaiti, serif`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText(p.name.length > 4 ? p.name.slice(0, 4) : p.name, x + 4, y + 3);
+    ctx.fillText(ellipsize(ctx, titleRaw, innerW), x + padX, y + 3);
 
-    ctx.font = `${fs - 1}px KaiTi, serif`;
+    const subFs = fitFontSize(ctx, line2, innerW, preferSub, minFs, false);
+    ctx.font = `${subFs}px KaiTi, STKaiti, serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
-    const line2 = (p.coinValue || p.meritValue) ? effect : (steps === 0 ? (p.brief || '无变动') : effect);
-    ctx.fillText(ellipsize(ctx, line2, w - 8), p.x, y + h - 3);
+    ctx.fillText(ellipsize(ctx, line2, innerW), p.x, y + h - 4);
   }
 
   function drawCoin(ctx, c) {
